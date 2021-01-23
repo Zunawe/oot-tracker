@@ -1,6 +1,6 @@
 /* global describe, it, expect */
-import evaluate from '../../../../server/lib/ruleInterpreter/evaluate'
-import parse from '../../../../server/lib/ruleInterpreter/parse'
+import evaluate from '../../../util/rules/evaluate'
+import parse from '../../../util/rules/parse'
 
 describe('evaluate', () => {
   describe('literals', () => {

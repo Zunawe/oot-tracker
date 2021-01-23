@@ -1,5 +1,5 @@
 /* global describe, it, expect */
-import Lexer from '../../../../server/lib/ruleInterpreter/Lexer'
+import Lexer from '../../../util/rules/Lexer'
 
 describe('evaluate', () => {
   it('should create a token for a true literal', () => {
