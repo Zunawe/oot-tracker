@@ -1,7 +1,15 @@
 const Reader = require('./Reader')
 
+/**
+ * Create a token object from the type and symbol.
+ * @param {string} type The type of token (AND, IDENT, (, etc...)
+ * @param {symbol} symbol The string representation of this token
+ */
 const token = (type, symbol) => ({ type, symbol })
 
+/**
+ * Transforms an input into a list of tokens and then reads out those tokens
+ */
 class Lexer {
   constructor (input) {
     this._tokens = []
@@ -10,6 +18,10 @@ class Lexer {
     this._process()
   }
 
+  /**
+   * Get the name of a symbol at the current cursor position. Does not consume.
+   * @returns The name of a symbol at the current cursor position
+   */
   _getName () {
     let k = 1
     let buffer = ''
@@ -25,6 +37,9 @@ class Lexer {
     return buffer
   }
 
+  /**
+   * Read the input and generate tokens
+   */
   _process () {
     const reader = this._reader
     let symbol
@@ -69,13 +84,22 @@ class Lexer {
     this._tokens.push(token('EOF', null))
   }
 
-  peek (k) {
-    k = k === undefined ? 1 : k
+  /**
+   * Check the value of a single token later in the list
+   * @param {number} k The number of tokens forward to look
+   * @returns {string} The token at position k from the cursor
+   */
+  peek (k = 1) {
     return this._tokens[this._i + k]
   }
 
-  consume (k) {
-    this._i += k === undefined ? 1 : k
+  /**
+   * Move the cursor forward k spaces and return the last token
+   * @param {number} k The number of tokens forward to consume
+   * @returns {string} The token at position k from the cursor
+   */
+  consume (k = 1) {
+    this._i += k
     return this._tokens[this._i]
   }
 }

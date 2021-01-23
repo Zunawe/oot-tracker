@@ -1,7 +1,32 @@
 const Lexer = require('./Lexer')
 const AST = require('./AST')
 
+/**
+ * (
+ *   {E, A, T, B, t, f},
+ *   {t, f},
+ *   E,
+ *   {
+ *     E -> A | A 'OR' E,
+ *     A -> T | T 'AND' A,
+ *     T -> B | '(' E ')'
+ *     B -> t | f
+ *     t -> 'true'
+ *     f -> 'false'
+ *   }
+ * )
+ */
+
+/**
+ * Create an AST from a string
+ * @param {string} input The string to parse
+ */
 const parse = (input) => {
+  const lexer = new Lexer(input)
+
+  /**
+   * Try to parse either an AND binary operation or an OR binary operation
+   */
   const parseExpression = () => {
     const lhs = parseAnd()
     if (lhs === null) throw new Error('Failed to parse')
@@ -12,6 +37,9 @@ const parse = (input) => {
     return new AST.Binary(op, lhs, rhs)
   }
 
+  /**
+   * Try to parse either a term or an AND binary operation
+   */
   const parseAnd = () => {
     const lhs = parseTerm()
     if (lhs === null) return null
@@ -22,6 +50,9 @@ const parse = (input) => {
     return new AST.Binary(op, lhs, rhs)
   }
 
+  /**
+   * Try to parse either a boolean or parenthesized expression
+   */
   const parseTerm = () => {
     const boolNode = parseBool()
     if (boolNode) return boolNode
@@ -33,6 +64,9 @@ const parse = (input) => {
     return expr
   }
 
+  /**
+   * Try to parse a boolean literal. Return null if not possible.
+   */
   const parseBool = () => {
     let node
 
@@ -44,6 +78,9 @@ const parse = (input) => {
     return null
   }
 
+  /**
+   * Return true if the next token is a left parenthesis. Return false otherwise.
+   */
   const parseLeftParenthesis = () => {
     if (lexer.peek().type === '(') {
       lexer.consume()
@@ -52,6 +89,9 @@ const parse = (input) => {
     return false
   }
 
+  /**
+   * Return true if the next token is a right parenthesis. Return false otherwise.
+   */
   const parseRightParenthesis = () => {
     if (lexer.peek().type === ')') {
       lexer.consume()
@@ -60,6 +100,9 @@ const parse = (input) => {
     return false
   }
 
+  /**
+   * Create an And node if the token is an AND operator. Return null otherwise.
+   */
   const parseAndOp = () => {
     if (lexer.peek().type === 'AND') {
       lexer.consume()
@@ -68,6 +111,9 @@ const parse = (input) => {
     return null
   }
 
+  /**
+   * Create an Or node if the token is an OR operator. Return null otherwise.
+   */
   const parseOrOp = () => {
     if (lexer.peek().type === 'OR') {
       lexer.consume()
@@ -76,6 +122,9 @@ const parse = (input) => {
     return null
   }
 
+  /**
+   * Create a B node if the token is a true literal. Return null otherwise.
+   */
   const parseTrue = () => {
     if (lexer.peek().type === 'TRUE_LITERAL') {
       lexer.consume()
@@ -84,6 +133,9 @@ const parse = (input) => {
     return null
   }
 
+  /**
+   * Create a B node if the token is a false literal. Return null otherwise.
+   */
   const parseFalse = () => {
     if (lexer.peek().type === 'FALSE_LITERAL') {
       lexer.consume()
@@ -92,7 +144,6 @@ const parse = (input) => {
     return null
   }
 
-  const lexer = new Lexer(input)
   return parseExpression()
 }
 

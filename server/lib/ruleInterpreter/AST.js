@@ -11,20 +11,12 @@ class Binary extends Expr {
     this.lhs = lhs
     this.rhs = rhs
   }
-
-  get children () {
-    return [this.lhs, this.rhs]
-  }
 }
 
 class B extends Expr {
   constructor (b) {
     super()
     this.value = b
-  }
-
-  get children () {
-    return null
   }
 }
 

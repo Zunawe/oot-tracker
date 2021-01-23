@@ -1,5 +1,10 @@
 const AST = require('./AST')
 
+/**
+ * Eval an expression
+ * @param {Expr} expr An AST node to evaluate
+ * @param {object} mem A map of names to values
+ */
 const evaluate = (expr, mem) => {
   if (expr instanceof AST.B) {
     return expr.value
@@ -8,6 +13,11 @@ const evaluate = (expr, mem) => {
   }
 }
 
+/**
+ * Evaluate a binary operation
+ * @param {Binary} expr An AST node to evaluate
+ * @param {object} mem A map of names to values
+ */
 const evaluateBinary = (expr, mem) => {
   const op = expr.op
   const lhs = expr.lhs
