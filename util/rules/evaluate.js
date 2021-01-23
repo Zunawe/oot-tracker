@@ -1,4 +1,5 @@
 const AST = require('./AST')
+const parse = require('./parse')
 
 /**
  * Eval an expression
@@ -45,7 +46,15 @@ const evaluateBinary = (expr, mem) => {
  */
 const evaluateVar = (expr, mem) => {
   if (expr.name in mem) {
-    return mem[expr.name]
+    if (typeof mem[expr.name] === 'boolean') {
+      // A variable storing a boolean
+      return mem[expr.name]
+    } else if (typeof mem[expr.name] === 'string') {
+      // An alias for an expression to be evaluated
+      // Parsing and evaluating here is probably a no-no
+      // But this isn't supposed to be very sophisticated or secure
+      return evaluate(parse(mem[expr.name]), mem)
+    }
   } else {
     throw new Error(`Undefined variable: ${expr.name}`)
   }

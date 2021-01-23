@@ -62,6 +62,10 @@ describe('evaluate', () => {
       expect(evaluate(parse('ITEM'), { ITEM: false })).toBe(false)
     })
 
+    it('should evaluate an alias', () => {
+      expect(evaluate(parse('a_test'), { a_test: 'true OR false' })).toBe(true)
+    })
+
     it('should throw an error for accessing an undefined variable', () => {
       expect(() => evaluate(parse('ITEM'), {})).toThrow()
     })
