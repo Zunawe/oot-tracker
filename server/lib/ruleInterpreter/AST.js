@@ -20,6 +20,13 @@ class B extends Expr {
   }
 }
 
+class Var extends Expr {
+  constructor (n) {
+    super()
+    this.name = n
+  }
+}
+
 class Bop {}
 class And extends Bop {}
 class Or extends Bop {}
@@ -28,6 +35,7 @@ module.exports = {
   Expr,
   Binary,
   B,
+  Var,
 
   Bop,
   And,

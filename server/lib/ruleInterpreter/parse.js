@@ -3,13 +3,13 @@ const AST = require('./AST')
 
 /**
  * (
- *   {E, A, T, B, t, f},
- *   {t, f},
+ *   {E, A, T, B, x, t, f},
+ *   {t, f, x},
  *   E,
  *   {
  *     E -> A | A 'OR' E,
  *     A -> T | T 'AND' A,
- *     T -> B | '(' E ')'
+ *     T -> B | x | '(' E ')'
  *     B -> t | f
  *     t -> 'true'
  *     f -> 'false'
@@ -57,6 +57,9 @@ const parse = (input) => {
     const boolNode = parseBool()
     if (boolNode) return boolNode
 
+    const varNode = parseVar()
+    if (varNode) return varNode
+
     if (!parseLeftParenthesis()) return null
     const expr = parseExpression()
     if (expr === null) throw new Error('Could not parse term')
@@ -75,6 +78,17 @@ const parse = (input) => {
     node = parseFalse()
     if (node) return node
 
+    return null
+  }
+
+  /**
+   * Create a Var node if the token is an identifier. Return null otherwise.
+   */
+  const parseVar = () => {
+    if (lexer.peek().type === 'IDENT') {
+      const token = lexer.consume()
+      return new AST.Var(token.symbol)
+    }
     return null
   }
 
