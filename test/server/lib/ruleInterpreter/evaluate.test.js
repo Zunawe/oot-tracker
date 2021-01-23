@@ -66,4 +66,26 @@ describe('evaluate', () => {
       expect(() => evaluate(parse('ITEM'), {})).toThrow()
     })
   })
+
+  describe('Function Calls', () => {
+    it('should correctly call a function in memory', () => {
+      const mem = {
+        _func: (arg) => arg === 'TEST'
+      }
+
+      expect(evaluate(parse('_func/TEST'), mem)).toBe(true)
+      expect(evaluate(parse('_func/TEST_BAD'), mem)).toBe(false)
+    })
+
+    it('should correctly call a function in context of other operations', () => {
+      const mem = {
+        _func: () => true,
+        TEST: true
+      }
+
+      expect(evaluate(parse('_func/TEST AND true'), mem)).toBe(true)
+      expect(evaluate(parse('_func/TEST AND false'), mem)).toBe(false)
+      expect(evaluate(parse('(_func/TEST) AND TEST'), mem)).toBe(true)
+    })
+  })
 })
