@@ -91,5 +91,13 @@ describe('evaluate', () => {
       expect(evaluate(parse('_func/TEST AND false'), mem)).toBe(false)
       expect(evaluate(parse('(_func/TEST) AND TEST'), mem)).toBe(true)
     })
+
+    it('should eval the return value of a function if it\'s a string', () => {
+      const mem = {
+        _func: () => 'true AND (false OR true)'
+      }
+
+      expect(evaluate(parse('_func/TEST'), mem)).toBe(true)
+    })
   })
 })

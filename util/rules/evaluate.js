@@ -68,7 +68,14 @@ const evaluateVar = (expr, mem) => {
 const evaluateCall = (expr, mem) => {
   const { func, arg } = expr
   if (func.name in mem) {
-    return mem[func.name](arg.name)
+    const result = mem[func.name](arg.name)
+    if (typeof result === 'boolean') {
+      return result
+    } else if (typeof result === 'string') {
+      return evaluate(parse(result), mem)
+    } else {
+      throw new Error('Invalid function return type')
+    }
   } else {
     throw new Error(`Undefined variable: ${expr.name}`)
   }
