@@ -12,6 +12,10 @@ const evaluate = (expr, mem) => {
     return evaluateVar(expr, mem)
   } else if (expr instanceof AST.Binary) {
     return evaluateBinary(expr, mem)
+  } else if (expr instanceof AST.Call) {
+    return evaluateCall(expr, mem)
+  } else {
+    throw new Error('Could not evaluate expression')
   }
 }
 
@@ -26,11 +30,11 @@ const evaluateBinary = (expr, mem) => {
   const rhs = expr.rhs
 
   if (op instanceof AST.And) {
-    return evaluate(lhs) && evaluate(rhs)
+    return evaluate(lhs, mem) && evaluate(rhs, mem)
   } else if (op instanceof AST.Or) {
-    return evaluate(lhs) || evaluate(rhs)
+    return evaluate(lhs, mem) || evaluate(rhs, mem)
   } else {
-    throw new Error('Could not evaluate expression')
+    throw new Error('Could not evaluate binary operation')
   }
 }
 
@@ -42,6 +46,20 @@ const evaluateBinary = (expr, mem) => {
 const evaluateVar = (expr, mem) => {
   if (expr.name in mem) {
     return mem[expr.name]
+  } else {
+    throw new Error(`Undefined variable: ${expr.name}`)
+  }
+}
+
+/**
+ * Get a variable from memory
+ * @param {Call} expr An AST node to evaluate
+ * @param {object} mem A map of names to values
+ */
+const evaluateCall = (expr, mem) => {
+  const { func, arg } = expr
+  if (func.name in mem) {
+    return mem[func.name](arg.name)
   } else {
     throw new Error(`Undefined variable: ${expr.name}`)
   }

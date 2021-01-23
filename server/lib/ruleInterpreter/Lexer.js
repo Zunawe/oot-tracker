@@ -42,7 +42,7 @@ class Lexer {
    */
   _process () {
     const reader = this._reader
-    let symbol
+    let symbol, arg
 
     while (!reader.isEOF()) {
       const current = reader.peek()
@@ -54,9 +54,15 @@ class Lexer {
           break
         case '(':
         case ')':
+          this._tokens.push(token(current, current))
+          this._reader.consume()
+          break
         case '/':
           this._tokens.push(token(current, current))
           this._reader.consume()
+          arg = this._getName()
+          this._tokens.push(token('ARG', arg))
+          this._reader.consume(arg.length)
           break
         default:
           symbol = this._getName()

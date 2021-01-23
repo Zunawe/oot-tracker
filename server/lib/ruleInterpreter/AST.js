@@ -4,6 +4,14 @@ class Expr {
   }
 }
 
+class Call extends Expr {
+  constructor (func, arg) {
+    super()
+    this.func = func
+    this.arg = arg
+  }
+}
+
 class Binary extends Expr {
   constructor (op, lhs, rhs) {
     super()
@@ -33,6 +41,7 @@ class Or extends Bop {}
 
 module.exports = {
   Expr,
+  Call,
   Binary,
   B,
   Var,

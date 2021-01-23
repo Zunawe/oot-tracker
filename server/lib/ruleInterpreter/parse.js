@@ -3,16 +3,15 @@ const AST = require('./AST')
 
 /**
  * (
- *   {E, A, T, B, x, t, f},
+ *   {E, A, T, C, B, x, t, f},
  *   {t, f, x},
  *   E,
  *   {
  *     E -> A | A 'OR' E,
  *     A -> T | T 'AND' A,
- *     T -> B | x | '(' E ')'
+ *     T -> B | C | x | '(' E ')'
+ *     C -> x '/' x
  *     B -> t | f
- *     t -> 'true'
- *     f -> 'false'
  *   }
  * )
  */
@@ -57,6 +56,9 @@ const parse = (input) => {
     const boolNode = parseBool()
     if (boolNode) return boolNode
 
+    const call = parseCall()
+    if (call) return call
+
     const varNode = parseVar()
     if (varNode) return varNode
 
@@ -86,6 +88,31 @@ const parse = (input) => {
    */
   const parseVar = () => {
     if (lexer.peek().type === 'IDENT') {
+      const token = lexer.consume()
+      return new AST.Var(token.symbol)
+    }
+    return null
+  }
+
+  /**
+   * Try to parse a function call
+   */
+  const parseCall = () => {
+    if (lexer.peek(2).type === '/') {
+      const func = parseVar()
+      if (func === null) throw new Error('Failed to parse')
+      lexer.consume() // Consume the slash
+      const arg = parseArg()
+      if (arg === null) throw new Error('Failed to parse')
+      return new AST.Call(func, arg)
+    }
+  }
+
+  /**
+   * Create a Var node if the token is an argument. Return null otherwise.
+   */
+  const parseArg = () => {
+    if (lexer.peek().type === 'ARG') {
       const token = lexer.consume()
       return new AST.Var(token.symbol)
     }
