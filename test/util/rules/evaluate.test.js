@@ -74,7 +74,7 @@ describe('evaluate', () => {
   describe('Function Calls', () => {
     it('should correctly call a function in memory', () => {
       const mem = {
-        _func: (arg) => arg === 'TEST'
+        _func: (arg) => arg === 'TEST' ? 'true' : 'false'
       }
 
       expect(evaluate(parse('_func/TEST'), mem)).toBe(true)
@@ -83,7 +83,7 @@ describe('evaluate', () => {
 
     it('should correctly call a function in context of other operations', () => {
       const mem = {
-        _func: () => true,
+        _func: () => 'true',
         TEST: true
       }
 

@@ -1,7 +1,7 @@
 /* global describe, it, expect */
 import Lexer from '../../../util/rules/Lexer'
 
-describe('evaluate', () => {
+describe('Lexer', () => {
   it('should create a token for a true literal', () => {
     const lexer = new Lexer('true')
     expect(lexer._tokens).toStrictEqual([
