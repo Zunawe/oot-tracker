@@ -2,9 +2,11 @@
  * Reader for an input to be parsed.
  */
 class Reader {
-  constructor (input) {
-    this._input = input
-    this._i = -1
+  private readonly input: string
+  private i: number = -1
+
+  constructor (input: string) {
+    this.input = input
   }
 
   /**
@@ -12,8 +14,8 @@ class Reader {
    * @param {number} k The number of characters forward to look
    * @returns {string} The character at position k from the cursor
    */
-  peek (k = 1) {
-    return this._input.charAt(this._i + k)
+  peek (k = 1): string {
+    return this.input.charAt(this.i + k)
   }
 
   /**
@@ -21,9 +23,9 @@ class Reader {
    * @param {number} k The number of characters forward to consume
    * @returns {string} The character at position k from the cursor
    */
-  consume (k = 1) {
-    this._i += k
-    return this._input.charAt(this._i)
+  consume (k = 1): string {
+    this.i += k
+    return this.input.charAt(this.i)
   }
 
   /**
@@ -31,9 +33,13 @@ class Reader {
    * @param {number} k The number of characters forward check
    * @returns {boolean} false if the character is still within the input
    */
-  isEOF (k = 1) {
-    return this._i + k >= this._input.length
+  isEOF (k = 1): boolean {
+    return this.i + k >= this.input.length
+  }
+
+  getCursorLocation (): number {
+    return this.i
   }
 }
 
-module.exports = Reader
+export default Reader

@@ -1,8 +1,9 @@
 /* global describe, beforeEach, it, expect */
-import canReach from '../../util/canReach'
+import canReach, { Region } from '../../util/canReach'
+import { Memory } from '../../util/rules/evaluate'
 
 describe('canReach', () => {
-  let regions, ctx
+  let regions: { [key: string]: Region }, ctx: Memory
 
   beforeEach(() => {
     regions = {
