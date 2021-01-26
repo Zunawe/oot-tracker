@@ -1,15 +1,11 @@
+import { match } from 'pattern-matching-ts/match'
+
 import {
   Expr,
-  Binary,
-  B,
-  Var,
-
-  Bop,
-  And,
-  Or
+  Bop
 } from './AST'
 
-export interface Memory {
+export interface Env {
   [key: string]: boolean
 }
 
@@ -18,37 +14,21 @@ export interface Memory {
  * @param {Expr} expr An AST node to evaluate
  * @param {object} mem A map of names to values
  */
-const evaluate = (expr: Expr, mem: Memory): boolean => {
-  if (expr instanceof B) {
-    return expr.value
-  } else if (expr instanceof Var) {
-    return evaluateVar(expr, mem)
-  } else if (expr instanceof Binary) {
-    return evaluateBinary(expr, mem)
-  // } else if (expr instanceof Call) {
-    // return evaluateCall(expr, mem)
-  } else {
-    throw new Error('Could not evaluate expression')
-  }
-}
-
-/**
- * Evaluate a binary operation
- * @param {Binary} expr An AST node to evaluate
- * @param {object} mem A map of names to values
- */
-const evaluateBinary = (expr: Binary, mem: Memory): boolean => {
-  const op: Bop = expr.op
-  const lhs: Expr = expr.lhs
-  const rhs: Expr = expr.rhs
-
-  if (op instanceof And) {
-    return evaluate(lhs, mem) && evaluate(rhs, mem)
-  } else if (op instanceof Or) {
-    return evaluate(lhs, mem) || evaluate(rhs, mem)
-  } else {
-    throw new Error('Could not evaluate binary operation')
-  }
+const evaluate = (env: Env, e: Expr): boolean => {
+  return match<Expr, boolean>({
+    B: ({ value }: any) => value,
+    Var: ({ name }: any) => lookup(env, name),
+    Binary: ({ op, lhs, rhs }: any) => {
+      return match<Bop, boolean>({
+        And: () => evaluate(env, lhs) && evaluate(env, rhs),
+        Or: () => evaluate(env, lhs) || evaluate(env, rhs)
+      })(op)
+    },
+    _: () => {
+      console.log(e)
+      throw new Error(`Could not match expression: ${e.dump()}`)
+    }
+  })(e)
 }
 
 /**
@@ -56,27 +36,12 @@ const evaluateBinary = (expr: Binary, mem: Memory): boolean => {
  * @param {Var} expr An AST node to evaluate
  * @param {object} mem A map of names to values
  */
-const evaluateVar = (expr: Var, mem: Memory): boolean => {
-  if (expr.name in mem) {
-    return mem[expr.name]
+const lookup = (env: Env, name: string): boolean => {
+  if (name in env) {
+    return env[name]
   } else {
-    throw new Error(`Undefined variable: ${expr.name}`)
+    throw new Error(`Undefined variable: ${name}`)
   }
 }
-
-/**
- * Get a variable from memory
- * @param {Call} expr An AST node to evaluate
- * @param {object} mem A map of names to values
- */
-// const evaluateCall = (expr, mem) => {
-//   const { func, arg } = expr
-//   if (func.name in mem) {
-//     const result = mem[func.name](arg.name)
-//     return evaluate(parse(result), mem)
-//   } else {
-//     throw new Error(`Undefined variable: ${expr.name}`)
-//   }
-// }
 
 export default evaluate

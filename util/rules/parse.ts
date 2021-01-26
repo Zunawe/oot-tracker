@@ -1,4 +1,7 @@
-import { Maybe, Just, Nothing, MaybeType } from '../Maybe'
+import { Option, some, none } from 'fp-ts/Option'
+import { match } from 'pattern-matching-ts/match'
+import { pipe } from 'fp-ts/lib/function'
+
 import Lexer, { TokenType, Token } from './Lexer'
 import {
   Expr,
@@ -35,72 +38,120 @@ const parse = (input: string): Expr => {
   /**
    * Try to parse either an AND binary operation or an OR binary operation
    */
-  const parseExpression = (): Maybe<Expr> => {
-    const lhs: Maybe<Expr> = parseAnd()
-    if (lhs.type === MaybeType.Nothing) throw new Error('Failed to parse')
-    const op: Maybe<Or> = parseOrOp()
-    if (op.type === MaybeType.Nothing) return lhs
-    const rhs: Maybe<Expr> = parseExpression()
-    if (rhs.type === MaybeType.Nothing) throw new Error('Failed to parse')
-    return Just(new Binary(op.value, lhs.value, rhs.value))
-  }
+  const parseExpression = (): Option<Expr> => pipe(
+    parseAnd(),
+    match({
+      None: () => none,
+      Some: (lhs) => pipe(
+        parseOrOp(),
+        match({
+          None: () => lhs,
+          Some: (op) => pipe(
+            parseExpression(),
+            match({
+              None: () => { throw new Error('Failed to parse') },
+              Some: (rhs) => some(new Binary(op.value, lhs.value, rhs.value))
+            })
+          )
+        })
+      )
+    })
+  )
 
   /**
    * Try to parse either a term or an AND binary operation
    */
-  const parseAnd = (): Maybe<Expr> => {
-    const lhs: Maybe<Expr> = parseTerm()
-    if (lhs.type === MaybeType.Nothing) return Nothing()
-    const op: Maybe<Or> = parseAndOp()
-    if (op.type === MaybeType.Nothing) return lhs
-    const rhs: Maybe<Expr> = parseAnd()
-    if (rhs.type === MaybeType.Nothing) throw new Error('Failed to parse')
-    return Just(new Binary(op.value, lhs.value, rhs.value))
-  }
+  const parseAnd = (): Option<Expr> => pipe(
+    parseTerm(),
+    match({
+      None: () => none,
+      Some: (lhs) => pipe(
+        parseAndOp(),
+        match({
+          None: () => lhs,
+          Some: (op) => pipe(
+            parseAnd(),
+            match({
+              None: () => { throw new Error('Could not parse') },
+              Some: (rhs) => some(new Binary(op.value, lhs.value, rhs.value))
+            })
+          )
+        })
+      )
+    })
+  )
 
   /**
    * Try to parse either a boolean or parenthesized expression
    */
-  const parseTerm = (): Maybe<Expr> => {
-    const boolNode: Maybe<B> = parseBool()
-    if (boolNode.type === MaybeType.Just) return boolNode
+  const parseTerm = (): Option<Expr> => pipe(
+    parseBool(),
+    match({
+      Some: (node) => node,
+      None: () => pipe(
+        parseVar(),
+        match({
+          Some: (node) => node,
+          None: () => pipe(
+            parseLeftParenthesis(),
+            match({
+              Some: () => pipe(
+                parseExpression(),
+                match({
+                  Some: (e) => pipe(
+                    parseRightParenthesis(),
+                    match({
+                      Some: () => e,
+                      None: () => { throw new Error('Missing right parenthesis') }
+                    })
+                  ),
+                  None: () => { throw new Error('Could not parse') }
+                })
+              ),
+              None: () => none
+            })
+          )
+        })
+      )
+    })
+  )
 
-    // const call = parseCall()
-    // if (call) return call
+  // const call = parseCall()
+  // if (call) return call
 
-    const varNode: Maybe<Var> = parseVar()
-    if (varNode.type === MaybeType.Just) return varNode
+  //   const varNode: Option<Var> = parseVar()
+  //   if (varNode.type === MaybeType.Just) return varNode
 
-    if (!parseLeftParenthesis()) return Nothing()
-    const expr: Maybe<Expr> = parseExpression()
-    if (expr.type === MaybeType.Nothing) throw new Error('Could not parse term')
-    if (!parseRightParenthesis()) throw new Error('Missing right parenthesis')
-    return expr
-  }
+  //   if (!parseLeftParenthesis()) return Nothing()
+  //   const expr: Maybe<Expr> = parseExpression()
+  //   if (expr.type === MaybeType.Nothing) throw new Error('Could not parse term')
+  //   if (!parseRightParenthesis()) throw new Error('Missing right parenthesis')
+  //   return expr
+  // }
 
   /**
    * Try to parse a boolean literal. Return null if not possible.
    */
-  const parseBool = (): Maybe<B> => {
+  const parseBool = (): Option<B> => {
     const token: Token = lexer.peek()
 
     if (token.type === TokenType.BOOLEAN) {
       lexer.consume()
-      return Just(new B(token.symbol === 'true'))
+      return some(new B(token.symbol === 'true'))
     }
 
-    return Nothing()
+    return none
   }
 
   /**
    * Create a Var node if the token is an identifier. Return null otherwise.
    */
-  const parseVar = (): Maybe<Var> => {
+  const parseVar = (): Option<Var> => {
     if (lexer.peek().type === 'IDENT') {
       const token = lexer.consume()
-      return Just(new Var(token.symbol))
+      return some(new Var(token.symbol))
     }
-    return Nothing()
+    return none
   }
 
   /**
@@ -131,50 +182,54 @@ const parse = (input: string): Expr => {
   /**
    * Return true if the next token is a left parenthesis. Return false otherwise.
    */
-  const parseLeftParenthesis = (): boolean => {
+  const parseLeftParenthesis = (): Option<true> => {
     if (lexer.peek().type === TokenType.LEFT_PAREN) {
       lexer.consume()
-      return true
+      return some(true)
     }
-    return false
+    return none
   }
 
   /**
    * Return true if the next token is a right parenthesis. Return false otherwise.
    */
-  const parseRightParenthesis = (): boolean => {
+  const parseRightParenthesis = (): Option<true> => {
     if (lexer.peek().type === TokenType.RIGHT_PAREN) {
       lexer.consume()
-      return true
+      return some(true)
     }
-    return false
+    return none
   }
 
   /**
    * Create an And node if the token is an AND operator. Return null otherwise.
    */
-  const parseAndOp = (): Maybe<And> => {
+  const parseAndOp = (): Option<And> => {
     if (lexer.peek().type === TokenType.AND) {
       lexer.consume()
-      return Just(new And())
+      return some(new And())
     }
-    return Nothing()
+    return none
   }
 
   /**
    * Create an Or node if the token is an OR operator. Return null otherwise.
    */
-  const parseOrOp = (): Maybe<Or> => {
+  const parseOrOp = (): Option<Or> => {
     if (lexer.peek().type === TokenType.OR) {
       lexer.consume()
-      return Just(new Or())
+      return some(new Or())
     }
-    return Nothing()
+    return none
   }
 
-  const root: Maybe<Expr> = parseExpression()
-  if (root.type === MaybeType.Nothing) throw new Error('Nothing to parse')
-  return root.value
+  return pipe(
+    parseExpression(),
+    match({
+      Some: (e) => e.value,
+      None: () => { throw new Error('Nothing to parse') }
+    })
+  )
 }
 
 export default parse

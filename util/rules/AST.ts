@@ -1,7 +1,9 @@
 export abstract class Node {
   abstract dump (): string
 }
-export abstract class Expr extends Node {}
+export abstract class Expr extends Node {
+  readonly _tag: string = 'Expr'
+}
 
 // class Call extends Expr {
 //   func: Var
@@ -14,6 +16,7 @@ export abstract class Expr extends Node {}
 // }
 
 export class Binary extends Expr {
+  readonly _tag: string = 'Binary'
   op: Bop
   lhs: Expr
   rhs: Expr
@@ -31,6 +34,7 @@ export class Binary extends Expr {
 }
 
 export class B extends Expr {
+  readonly _tag: string = 'B'
   value: boolean
 
   constructor (b: boolean) {
@@ -44,6 +48,7 @@ export class B extends Expr {
 }
 
 export class Var extends Expr {
+  readonly _tag: string = 'Var'
   name: string
 
   constructor (name: string) {
@@ -56,13 +61,17 @@ export class Var extends Expr {
   }
 }
 
-export abstract class Bop extends Node {}
+export abstract class Bop extends Node {
+  readonly _tag: string = 'Bop'
+}
 export class And extends Bop {
+  readonly _tag: string = 'And'
   dump (): string {
     return 'AND'
   }
 }
 export class Or extends Bop {
+  readonly _tag: string = 'Or'
   dump (): string {
     return 'OR'
   }
