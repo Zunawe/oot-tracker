@@ -5,21 +5,63 @@ export abstract class Expr extends Node {
   readonly _tag: string = 'Expr'
 }
 
-// class Call extends Expr {
-//   func: Var
+export class B extends Expr {
+  readonly _tag: string = 'B'
+  readonly b: boolean
 
-//   constructor (func: Var, arg) {
-//     super()
-//     this.func = func
-//     this.arg = arg
-//   }
-// }
+  constructor (b: boolean) {
+    super()
+    this.b = b
+  }
+
+  dump (): string {
+    return this.b.toString().toUpperCase()
+  }
+}
+
+export class Function extends Expr {
+  readonly _tag: string = 'Function'
+  readonly body: Expr
+  readonly params: Var[]
+
+  constructor (body: Expr, params: Var[]) {
+    super()
+    this.body = body
+    this.params = params
+  }
+
+  dump (): string {
+    const paramsString: string = this.params.reduce((acc, param, i, arr) => {
+      return acc + param.dump() + (i < arr.length - 1 ? ', ' : '')
+    }, '')
+    return `(${paramsString}) { ${this.body.dump()} }`
+  }
+}
+
+export class Call extends Expr {
+  readonly _tag: string = 'Call'
+  readonly func: Var
+  readonly args: Expr[]
+
+  constructor (func: Var, args: Expr[]) {
+    super()
+    this.func = func
+    this.args = args
+  }
+
+  dump (): string {
+    const argsString: string = this.args.reduce((acc, arg, i, arr) => {
+      return acc + arg.dump() + (i < arr.length - 1 ? ', ' : '')
+    }, '')
+    return `${this.func.name}(${argsString})`
+  }
+}
 
 export class Binary extends Expr {
   readonly _tag: string = 'Binary'
-  op: Bop
-  lhs: Expr
-  rhs: Expr
+  readonly op: Bop
+  readonly lhs: Expr
+  readonly rhs: Expr
 
   constructor (op: Bop, lhs: Expr, rhs: Expr) {
     super()
@@ -33,23 +75,9 @@ export class Binary extends Expr {
   }
 }
 
-export class B extends Expr {
-  readonly _tag: string = 'B'
-  value: boolean
-
-  constructor (b: boolean) {
-    super()
-    this.value = b
-  }
-
-  dump (): string {
-    return this.value.toString()
-  }
-}
-
 export class Var extends Expr {
   readonly _tag: string = 'Var'
-  name: string
+  readonly name: string
 
   constructor (name: string) {
     super()

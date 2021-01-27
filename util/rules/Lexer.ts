@@ -6,9 +6,8 @@ export enum TokenType {
   BOOLEAN = 'BOOLEAN',
   AND = 'AND',
   OR = 'OR',
-  FORWARD_SLASH = 'FORWARD_SLASH',
+  COMMA = 'COMMA',
   IDENT = 'IDENT',
-  ARG = 'ARG',
   EOF = 'EOF'
 }
 
@@ -63,7 +62,7 @@ class Lexer {
    */
   private process (): void {
     const reader = this.reader
-    let symbol, arg
+    let symbol
 
     while (!reader.isEOF()) {
       const current = reader.peek()
@@ -75,18 +74,15 @@ class Lexer {
           break
         case '(':
           this.tokens.push(token(TokenType.LEFT_PAREN, current))
-          this.reader.consume()
+          reader.consume()
           break
         case ')':
           this.tokens.push(token(TokenType.RIGHT_PAREN, current))
-          this.reader.consume()
+          reader.consume()
           break
-        case '/':
-          this.tokens.push(token(TokenType.FORWARD_SLASH, current))
-          this.reader.consume()
-          arg = this.getName()
-          this.tokens.push(token(TokenType.ARG, arg))
-          this.reader.consume(arg.length)
+        case ',':
+          this.tokens.push(token(TokenType.COMMA, current))
+          reader.consume()
           break
         default:
           symbol = this.getName()
@@ -97,15 +93,15 @@ class Lexer {
             case 'OR':
               this.tokens.push(token(TokenType.OR, symbol))
               break
-            case 'true':
-            case 'false':
+            case 'TRUE':
+            case 'FALSE':
               this.tokens.push(token(TokenType.BOOLEAN, symbol))
               break
             default:
               this.tokens.push(token(TokenType.IDENT, symbol))
               break
           }
-          this.reader.consume(symbol.length)
+          reader.consume(symbol.length)
           break
       }
     }

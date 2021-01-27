@@ -5,6 +5,7 @@ import { pipe } from 'fp-ts/lib/function'
 import Lexer, { TokenType, Token } from './Lexer'
 import {
   Expr,
+  Call,
   Binary,
   B,
   Var,
@@ -15,15 +16,18 @@ import {
 
 /**
  * (
- *   {E, A, T, C, B, x, t, f},
- *   {t, f, x},
- *   E,
+ *   {expression, term, factor, bool, functioncall, arguments, identifier, empty},
+ *   {bool, identifier, empty},
+ *   expression,
  *   {
- *     E -> A | A 'OR' E,
- *     A -> T | T 'AND' A,
- *     T -> B | C | x | '(' E ')'
- *     C -> x '/' x
- *     B -> t | f
+ *     expression ::= term | term 'OR' expression
+ *     term ::= factor | factor 'AND' term
+ *     factor ::= bool | functioncall | identifier | '(' expression ')'
+ *     functioncall ::= identifier '(' arguments ')'
+ *     arguments ::= empty | expression | expression ',' arguments
+
+ *     bool ::= 'TRUE' | 'FALSE'
+ *     identifier ::= [a-zA-Z_][a-zA-Z0-9_]*
  *   }
  * )
  */
@@ -39,7 +43,7 @@ const parse = (input: string): Expr => {
    * Try to parse either an AND binary operation or an OR binary operation
    */
   const parseExpression = (): Option<Expr> => pipe(
-    parseAnd(),
+    parseTerm(),
     match({
       None: () => none,
       Some: (lhs) => pipe(
@@ -61,8 +65,8 @@ const parse = (input: string): Expr => {
   /**
    * Try to parse either a term or an AND binary operation
    */
-  const parseAnd = (): Option<Expr> => pipe(
-    parseTerm(),
+  const parseTerm = (): Option<Expr> => pipe(
+    parseFactor(),
     match({
       None: () => none,
       Some: (lhs) => pipe(
@@ -70,7 +74,7 @@ const parse = (input: string): Expr => {
         match({
           None: () => lhs,
           Some: (op) => pipe(
-            parseAnd(),
+            parseTerm(),
             match({
               None: () => { throw new Error('Could not parse') },
               Some: (rhs) => some(new Binary(op.value, lhs.value, rhs.value))
@@ -84,31 +88,37 @@ const parse = (input: string): Expr => {
   /**
    * Try to parse either a boolean or parenthesized expression
    */
-  const parseTerm = (): Option<Expr> => pipe(
+  const parseFactor = (): Option<Expr> => pipe(
     parseBool(),
     match({
       Some: (node) => node,
       None: () => pipe(
-        parseVar(),
+        parseCall(),
         match({
-          Some: (node) => node,
+          Some: (e) => e,
           None: () => pipe(
-            parseLeftParenthesis(),
+            parseVar(),
             match({
-              Some: () => pipe(
-                parseExpression(),
+              Some: (node) => node,
+              None: () => pipe(
+                parseLeftParenthesis(),
                 match({
-                  Some: (e) => pipe(
-                    parseRightParenthesis(),
+                  Some: () => pipe(
+                    parseExpression(),
                     match({
-                      Some: () => e,
-                      None: () => { throw new Error('Missing right parenthesis') }
+                      Some: (e) => pipe(
+                        parseRightParenthesis(),
+                        match({
+                          Some: () => e,
+                          None: () => { throw new Error('Missing right parenthesis') }
+                        })
+                      ),
+                      None: () => { throw new Error('Could not parse') }
                     })
                   ),
-                  None: () => { throw new Error('Could not parse') }
+                  None: () => none
                 })
-              ),
-              None: () => none
+              )
             })
           )
         })
@@ -116,18 +126,33 @@ const parse = (input: string): Expr => {
     })
   )
 
-  // const call = parseCall()
-  // if (call) return call
+  const parseCall = (): Option<Call> => {
+    const func: Token = lexer.peek()
+    if (func.type !== TokenType.IDENT) return none
+    if (lexer.peek(2).type !== TokenType.LEFT_PAREN) return none
+    lexer.consume(2)
 
-  //   const varNode: Option<Var> = parseVar()
-  //   if (varNode.type === MaybeType.Just) return varNode
+    const args: Expr[] = []
+    if (lexer.peek().type !== TokenType.RIGHT_PAREN) {
+      pipe(
+        parseExpression(),
+        match({
+          Some: ({ value }) => args.push(value)
+        })
+      )
+    }
+    while (lexer.peek().type === TokenType.COMMA) {
+      lexer.consume()
+      pipe(
+        parseExpression(),
+        match({
+          Some: ({ value }) => args.push(value)
+        })
+      )
+    }
 
-  //   if (!parseLeftParenthesis()) return Nothing()
-  //   const expr: Maybe<Expr> = parseExpression()
-  //   if (expr.type === MaybeType.Nothing) throw new Error('Could not parse term')
-  //   if (!parseRightParenthesis()) throw new Error('Missing right parenthesis')
-  //   return expr
-  // }
+    return some(new Call(new Var(func.symbol), args))
+  }
 
   /**
    * Try to parse a boolean literal. Return null if not possible.
@@ -137,7 +162,7 @@ const parse = (input: string): Expr => {
 
     if (token.type === TokenType.BOOLEAN) {
       lexer.consume()
-      return some(new B(token.symbol === 'true'))
+      return some(new B(token.symbol === 'TRUE'))
     }
 
     return none
@@ -153,31 +178,6 @@ const parse = (input: string): Expr => {
     }
     return none
   }
-
-  /**
-   * Try to parse a function call
-   */
-  // const parseCall = () => {
-  //   if (lexer.peek(2).type === '/') {
-  //     const func = parseVar()
-  //     if (func === null) throw new Error('Failed to parse')
-  //     lexer.consume() // Consume the slash
-  //     const arg = parseArg()
-  //     if (arg === null) throw new Error('Failed to parse')
-  //     return new AST.Call(func, arg)
-  //   }
-  // }
-
-  /**
-   * Create a Var node if the token is an argument. Return null otherwise.
-   */
-  // const parseArg = () => {
-  //   if (lexer.peek().type === 'ARG') {
-  //     const token = lexer.consume()
-  //     return new AST.Var(token.symbol)
-  //   }
-  //   return null
-  // }
 
   /**
    * Return true if the next token is a left parenthesis. Return false otherwise.
