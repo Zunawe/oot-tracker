@@ -8,6 +8,7 @@ import {
   Call,
   Binary,
   B,
+  S,
   Var,
 
   And,
@@ -93,30 +94,36 @@ const parse = (input: string): Expr => {
     match({
       Some: (node) => node,
       None: () => pipe(
-        parseCall(),
+        parseString(),
         match({
-          Some: (e) => e,
+          Some: (node) => node,
           None: () => pipe(
-            parseVar(),
+            parseCall(),
             match({
-              Some: (node) => node,
+              Some: (e) => e,
               None: () => pipe(
-                parseLeftParenthesis(),
+                parseVar(),
                 match({
-                  Some: () => pipe(
-                    parseExpression(),
+                  Some: (node) => node,
+                  None: () => pipe(
+                    parseLeftParenthesis(),
                     match({
-                      Some: (e) => pipe(
-                        parseRightParenthesis(),
+                      Some: () => pipe(
+                        parseExpression(),
                         match({
-                          Some: () => e,
-                          None: () => { throw new Error('Missing right parenthesis') }
+                          Some: (e) => pipe(
+                            parseRightParenthesis(),
+                            match({
+                              Some: () => e,
+                              None: () => { throw new Error('Missing right parenthesis') }
+                            })
+                          ),
+                          None: () => { throw new Error('Could not parse') }
                         })
                       ),
-                      None: () => { throw new Error('Could not parse') }
+                      None: () => none
                     })
-                  ),
-                  None: () => none
+                  )
                 })
               )
             })
@@ -163,6 +170,20 @@ const parse = (input: string): Expr => {
     if (token.type === TokenType.BOOLEAN) {
       lexer.consume()
       return some(new B(token.symbol === 'TRUE'))
+    }
+
+    return none
+  }
+
+  /**
+   * Try to parse a string literal. Return null if not possible.
+   */
+  const parseString = (): Option<S> => {
+    const token: Token = lexer.peek()
+
+    if (token.type === TokenType.STRING) {
+      lexer.consume()
+      return some(new S(token.symbol))
     }
 
     return none

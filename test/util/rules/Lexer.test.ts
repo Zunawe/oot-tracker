@@ -33,6 +33,24 @@ describe('Lexer', () => {
     ])
   })
 
+  it('should create a token for a string literal', () => {
+    const lexer = new Lexer('\'this is a string\'')
+    const tokens = getTokens(lexer)
+    expect(tokens).toStrictEqual([
+      { type: TokenType.STRING, symbol: 'this is a string' },
+      { type: TokenType.EOF, symbol: '' }
+    ])
+  })
+
+  it('should create a token for a string literal even if it has other syntax in it', () => {
+    const lexer = new Lexer('\'this is a string with () and TRUE\'')
+    const tokens = getTokens(lexer)
+    expect(tokens).toStrictEqual([
+      { type: TokenType.STRING, symbol: 'this is a string with () and TRUE' },
+      { type: TokenType.EOF, symbol: '' }
+    ])
+  })
+
   it('should correctly tokenize an AND operation', () => {
     const lexer = new Lexer('TRUE AND FALSE')
     const tokens = getTokens(lexer)

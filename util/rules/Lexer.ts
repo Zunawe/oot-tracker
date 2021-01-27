@@ -7,6 +7,7 @@ export enum TokenType {
   AND = 'AND',
   OR = 'OR',
   COMMA = 'COMMA',
+  STRING = 'STRING',
   IDENT = 'IDENT',
   EOF = 'EOF'
 }
@@ -62,7 +63,8 @@ class Lexer {
    */
   private process (): void {
     const reader = this.reader
-    let symbol
+    let symbol: string
+    let buffer: string
 
     while (!reader.isEOF()) {
       const current = reader.peek()
@@ -83,6 +85,18 @@ class Lexer {
         case ',':
           this.tokens.push(token(TokenType.COMMA, current))
           reader.consume()
+          break
+        case '\'':
+          reader.consume()
+
+          buffer = ''
+          while (reader.peek() !== '\'') {
+            buffer += reader.consume()
+          }
+
+          reader.consume()
+
+          this.tokens.push(token(TokenType.STRING, buffer))
           break
         default:
           symbol = this.getName()

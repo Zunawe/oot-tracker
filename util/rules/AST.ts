@@ -19,6 +19,20 @@ export class B extends Expr {
   }
 }
 
+export class S extends Expr {
+  readonly _tag: string = 'S'
+  readonly s: string
+
+  constructor (s: string) {
+    super()
+    this.s = s
+  }
+
+  dump (): string {
+    return `'${this.s}'`
+  }
+}
+
 export class Function extends Expr {
   readonly _tag: string = 'Function'
   readonly body: Expr
