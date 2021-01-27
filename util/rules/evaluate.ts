@@ -3,8 +3,6 @@ import { match, matchW } from 'pattern-matching-ts/match'
 
 import {
   Expr,
-  Call,
-  Function,
   B,
   Binary,
   Var,
@@ -75,6 +73,13 @@ export const toBoolean = (e: Expr): boolean => {
   })(e)
 }
 
+export const toString = (e: Expr): string => {
+  return matchW('_tag')({
+    S: ({ s }) => s,
+    _: () => { throw new Error(`Cannot interpret expression as string: ${e?.dump?.()}`) }
+  })(e)
+}
+
 /**
  * Eval an expression
  * @param {Expr} expr An AST node to evaluate
@@ -83,6 +88,7 @@ export const toBoolean = (e: Expr): boolean => {
 const evaluate = (env: Env, e: Expr): Expr => {
   return match<Expr, Expr>({
     B: () => e,
+    S: () => e,
     Var: (e: Expr) => {
       const { name } = e as Var
       return lookup(env, name)
@@ -91,24 +97,33 @@ const evaluate = (env: Env, e: Expr): Expr => {
       const { op, lhs, rhs } = e as Binary
       return match<Bop, B>({
         And: () => new B(toBoolean(evaluate(env, lhs)) && toBoolean(evaluate(env, rhs))),
-        Or: () => new B(toBoolean(evaluate(env, lhs)) || toBoolean(evaluate(env, rhs)))
+        Or: () => new B(toBoolean(evaluate(env, lhs)) || toBoolean(evaluate(env, rhs))),
+        EqualTo: () => match<Expr, B>({
+          B: (b1) => match<Expr, B>({
+            B: (b2) => new B(toBoolean(b1) === toBoolean(b2)),
+            _: () => { throw new Error('Cannot compare boolean and ' + rhs.dump()) }
+          })(rhs),
+          S: (s1) => match<Expr, B>({
+            S: (s2) => new B(toString(s1) === toString(s2)),
+            _: () => { throw new Error('Cannot compare string and ' + rhs.dump()) }
+          })(rhs)
+        })(lhs)
       })(op)
     },
-    Call: (e) => {
-      const { func, args } = e as Call
+    // Call: (e) => {
+    //   const { func, args } = e as Call
 
-      const ar: ActivationRecord = new ActivationRecord()
-      const { body, params } = lookup(env, func.name) as Function
-      params.forEach((param, i) => ar.bind(param.name, evaluate(env, args[i])))
+    //   const ar: ActivationRecord = new ActivationRecord()
+    //   const { body, params } = lookup(env, func.name) as Function
+    //   params.forEach((param, i) => ar.bind(param.name, evaluate(env, args[i])))
 
-      env.stack.push(ar)
-      const result: Expr = evaluate(env, body)
-      env.stack.pop()
+    //   env.stack.push(ar)
+    //   const result: Expr = evaluate(env, body)
+    //   env.stack.pop()
 
-      return result
-    },
+    //   return result
+    // },
     _: () => {
-      console.log(e)
       throw new Error(`Could not match expression: ${e.dump()}`)
     }
   })(e)

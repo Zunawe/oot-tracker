@@ -5,6 +5,14 @@ export abstract class Expr extends Node {
   readonly _tag: string = 'Expr'
 }
 
+export class Empty extends Expr {
+  readonly _tag: string = 'Empty'
+
+  dump (): string {
+    return ''
+  }
+}
+
 export class B extends Expr {
   readonly _tag: string = 'B'
   readonly b: boolean
@@ -54,20 +62,17 @@ export class Function extends Expr {
 
 export class Call extends Expr {
   readonly _tag: string = 'Call'
-  readonly func: Var
-  readonly args: Expr[]
+  readonly func: Expr
+  readonly args: Expr
 
-  constructor (func: Var, args: Expr[]) {
+  constructor (func: Expr, args: Expr) {
     super()
     this.func = func
     this.args = args
   }
 
   dump (): string {
-    const argsString: string = this.args.reduce((acc, arg, i, arr) => {
-      return acc + arg.dump() + (i < arr.length - 1 ? ', ' : '')
-    }, '')
-    return `${this.func.name}(${argsString})`
+    return `${this.func.dump()}(${this.args.dump()})`
   }
 }
 
@@ -85,7 +90,9 @@ export class Binary extends Expr {
   }
 
   dump (): string {
-    return `(${this.lhs.dump()} ${this.op.dump()} ${this.rhs.dump()})`
+    return this.op._tag === 'Seq'
+      ? `${this.lhs.dump()}${this.op.dump()} ${this.rhs.dump()}`
+      : `(${this.lhs.dump()} ${this.op.dump()} ${this.rhs.dump()})`
   }
 }
 
@@ -116,5 +123,17 @@ export class Or extends Bop {
   readonly _tag: string = 'Or'
   dump (): string {
     return 'OR'
+  }
+}
+export class EqualTo extends Bop {
+  readonly _tag: string = 'EqualTo'
+  dump (): string {
+    return '=='
+  }
+}
+export class Seq extends Bop {
+  readonly _tag: string = 'Seq'
+  dump (): string {
+    return ','
   }
 }

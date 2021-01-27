@@ -1,4 +1,3 @@
-/* global describe, it, expect */
 import Lexer, { Token, TokenType } from '../../../util/rules/Lexer'
 
 describe('Lexer', () => {
@@ -34,7 +33,7 @@ describe('Lexer', () => {
   })
 
   it('should create a token for a string literal', () => {
-    const lexer = new Lexer('\'this is a string\'')
+    const lexer = new Lexer('"this is a string"')
     const tokens = getTokens(lexer)
     expect(tokens).toStrictEqual([
       { type: TokenType.STRING, symbol: 'this is a string' },
@@ -43,7 +42,7 @@ describe('Lexer', () => {
   })
 
   it('should create a token for a string literal even if it has other syntax in it', () => {
-    const lexer = new Lexer('\'this is a string with () and TRUE\'')
+    const lexer = new Lexer('"this is a string with () and TRUE"')
     const tokens = getTokens(lexer)
     expect(tokens).toStrictEqual([
       { type: TokenType.STRING, symbol: 'this is a string with () and TRUE' },
@@ -69,6 +68,17 @@ describe('Lexer', () => {
       { type: TokenType.BOOLEAN, symbol: 'TRUE' },
       { type: TokenType.OR, symbol: 'OR' },
       { type: TokenType.BOOLEAN, symbol: 'FALSE' },
+      { type: TokenType.EOF, symbol: '' }
+    ])
+  })
+
+  it('should correctly tokenize an EQUAL_TO operation', () => {
+    const lexer = new Lexer('"string1" == "string2"')
+    const tokens = getTokens(lexer)
+    expect(tokens).toStrictEqual([
+      { type: TokenType.STRING, symbol: 'string1' },
+      { type: TokenType.EQUAL_TO, symbol: '==' },
+      { type: TokenType.STRING, symbol: 'string2' },
       { type: TokenType.EOF, symbol: '' }
     ])
   })

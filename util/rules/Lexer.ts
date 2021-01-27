@@ -6,6 +6,7 @@ export enum TokenType {
   BOOLEAN = 'BOOLEAN',
   AND = 'AND',
   OR = 'OR',
+  EQUAL_TO = 'EQUAL_TO',
   COMMA = 'COMMA',
   STRING = 'STRING',
   IDENT = 'IDENT',
@@ -86,17 +87,23 @@ class Lexer {
           this.tokens.push(token(TokenType.COMMA, current))
           reader.consume()
           break
-        case '\'':
+        case '"':
           reader.consume()
 
           buffer = ''
-          while (reader.peek() !== '\'') {
+          while (reader.peek() !== '"') {
             buffer += reader.consume()
           }
 
           reader.consume()
 
           this.tokens.push(token(TokenType.STRING, buffer))
+          break
+        case '=':
+          reader.consume()
+          if (reader.peek() !== '=') throw new Error(`Character = expected in expression at position [${this.reader.getCursorLocation()}]`)
+          reader.consume()
+          this.tokens.push(token(TokenType.EQUAL_TO, '=='))
           break
         default:
           symbol = this.getName()

@@ -2,255 +2,196 @@ import { Option, some, none } from 'fp-ts/Option'
 import { match } from 'pattern-matching-ts/match'
 import { pipe } from 'fp-ts/lib/function'
 
-import Lexer, { TokenType, Token } from './Lexer'
+import Lexer, { TokenType } from './Lexer'
 import {
-  Expr,
-  Call,
-  Binary,
-  B,
-  S,
-  Var,
-
   And,
-  Or
+  B,
+  Binary,
+  Call,
+  Empty,
+  EqualTo,
+  Expr,
+  Or,
+  S,
+  Seq,
+  Var
 } from './AST'
 
 /**
- * (
- *   {expression, term, factor, bool, functioncall, arguments, identifier, empty},
- *   {bool, identifier, empty},
- *   expression,
- *   {
- *     expression ::= term | term 'OR' expression
- *     term ::= factor | factor 'AND' term
- *     factor ::= bool | functioncall | identifier | '(' expression ')'
- *     functioncall ::= identifier '(' arguments ')'
- *     arguments ::= empty | expression | expression ',' arguments
-
- *     bool ::= 'TRUE' | 'FALSE'
- *     identifier ::= [a-zA-Z_][a-zA-Z0-9_]*
- *   }
- * )
- */
-
-/**
- * Create an AST from a string
- * @param {string} input The string to parse
+ * letter = "a" | "b" | "c" | "d" | "e" | "f" |
+ *          "g" | "h" | "i" | "j" | "k" | "l" |
+ *          "m" | "n" | "o" | "p" | "q" | "r" |
+ *          "s" | "t" | "u" | "v" | "w" | "x" |
+ *          "y" | "z" | "A" | "B" | "C" | "D" |
+ *          "E" | "F" | "G" | "H" | "I" | "J" |
+ *          "K" | "L" | "M" | "N" | "O" | "P" |
+ *          "Q" | "R" | "S" | "T" | "U" | "V" |
+ *          "W" | "X" | "Y" | "Z";
+ * digit = "0" | "1" | "2" | "3" | "4" |
+ *         "5" | "6" | "7" | "8" | "9";
+ *
+ * expr = seq;
+ * seq = binary {, binary};
+ * binary = unary {bop unary};
+ * unary = unary | call;
+ * call = term {"(" expr ")"};
+ * term = x | b | s | empty | "(" expr ")";
+ *
+ * bop = "AND" | "OR" | "==";
+ * x = (letter | digit) {letter | digit | "_"}
+ * b = "TRUE" | "FALSE"
+ * s = '"' {?all_characters? - '"'} '"'
+ * empty = "";
  */
 const parse = (input: string): Expr => {
-  const lexer = new Lexer(input)
+  const lexer: Lexer = new Lexer(input)
+  return parseExpr(lexer)
+}
 
-  /**
-   * Try to parse either an AND binary operation or an OR binary operation
-   */
-  const parseExpression = (): Option<Expr> => pipe(
-    parseTerm(),
-    match({
-      None: () => none,
-      Some: (lhs) => pipe(
-        parseOrOp(),
-        match({
-          None: () => lhs,
-          Some: (op) => pipe(
-            parseExpression(),
-            match({
-              None: () => { throw new Error('Failed to parse') },
-              Some: (rhs) => some(new Binary(op.value, lhs.value, rhs.value))
-            })
-          )
-        })
-      )
-    })
-  )
+const parseExpr = (lexer: Lexer): Expr => pipe(
+  parseSeq(lexer),
+  match({
+    Some: ({ value }) => value,
+    None: () => new Empty()
+  })
+)
 
-  /**
-   * Try to parse either a term or an AND binary operation
-   */
-  const parseTerm = (): Option<Expr> => pipe(
-    parseFactor(),
-    match({
-      None: () => none,
-      Some: (lhs) => pipe(
-        parseAndOp(),
-        match({
-          None: () => lhs,
-          Some: (op) => pipe(
-            parseTerm(),
-            match({
-              None: () => { throw new Error('Could not parse') },
-              Some: (rhs) => some(new Binary(op.value, lhs.value, rhs.value))
-            })
-          )
-        })
-      )
-    })
-  )
-
-  /**
-   * Try to parse either a boolean or parenthesized expression
-   */
-  const parseFactor = (): Option<Expr> => pipe(
-    parseBool(),
-    match({
-      Some: (node) => node,
-      None: () => pipe(
-        parseString(),
-        match({
-          Some: (node) => node,
-          None: () => pipe(
-            parseCall(),
-            match({
-              Some: (e) => e,
-              None: () => pipe(
-                parseVar(),
-                match({
-                  Some: (node) => node,
-                  None: () => pipe(
-                    parseLeftParenthesis(),
-                    match({
-                      Some: () => pipe(
-                        parseExpression(),
-                        match({
-                          Some: (e) => pipe(
-                            parseRightParenthesis(),
-                            match({
-                              Some: () => e,
-                              None: () => { throw new Error('Missing right parenthesis') }
-                            })
-                          ),
-                          None: () => { throw new Error('Could not parse') }
-                        })
-                      ),
-                      None: () => none
-                    })
-                  )
-                })
-              )
-            })
-          )
-        })
-      )
-    })
-  )
-
-  const parseCall = (): Option<Call> => {
-    const func: Token = lexer.peek()
-    if (func.type !== TokenType.IDENT) return none
-    if (lexer.peek(2).type !== TokenType.LEFT_PAREN) return none
-    lexer.consume(2)
-
-    const args: Expr[] = []
-    if (lexer.peek().type !== TokenType.RIGHT_PAREN) {
-      pipe(
-        parseExpression(),
-        match({
-          Some: ({ value }) => args.push(value)
-        })
-      )
+const parseSeq = (lexer: Lexer): Option<Expr> => pipe(
+  parseBinary(lexer, 0),
+  match({
+    Some: (oLHS) => {
+      if (lexer.peek().type === TokenType.COMMA) {
+        lexer.consume()
+        return pipe(
+          parseBinary(lexer, 0),
+          match({
+            Some: (oRHS) => some(new Binary(new Seq(), oLHS.value, oRHS.value)),
+            None: () => { throw new Error('Expected expression after ","') }
+          })
+        )
+      }
+      return oLHS
     }
-    while (lexer.peek().type === TokenType.COMMA) {
-      lexer.consume()
-      pipe(
-        parseExpression(),
-        match({
-          Some: ({ value }) => args.push(value)
-        })
-      )
-    }
+  })
+)
 
-    return some(new Call(new Var(func.symbol), args))
+const binaryOperatorMap = [
+  {
+    [TokenType.EQUAL_TO]: EqualTo
+  },
+  {
+    [TokenType.OR]: Or
+  },
+  {
+    [TokenType.AND]: And
   }
-
-  /**
-   * Try to parse a boolean literal. Return null if not possible.
-   */
-  const parseBool = (): Option<B> => {
-    const token: Token = lexer.peek()
-
-    if (token.type === TokenType.BOOLEAN) {
-      lexer.consume()
-      return some(new B(token.symbol === 'TRUE'))
-    }
-
-    return none
-  }
-
-  /**
-   * Try to parse a string literal. Return null if not possible.
-   */
-  const parseString = (): Option<S> => {
-    const token: Token = lexer.peek()
-
-    if (token.type === TokenType.STRING) {
-      lexer.consume()
-      return some(new S(token.symbol))
-    }
-
-    return none
-  }
-
-  /**
-   * Create a Var node if the token is an identifier. Return null otherwise.
-   */
-  const parseVar = (): Option<Var> => {
-    if (lexer.peek().type === 'IDENT') {
-      const token = lexer.consume()
-      return some(new Var(token.symbol))
-    }
-    return none
-  }
-
-  /**
-   * Return true if the next token is a left parenthesis. Return false otherwise.
-   */
-  const parseLeftParenthesis = (): Option<true> => {
-    if (lexer.peek().type === TokenType.LEFT_PAREN) {
-      lexer.consume()
-      return some(true)
-    }
-    return none
-  }
-
-  /**
-   * Return true if the next token is a right parenthesis. Return false otherwise.
-   */
-  const parseRightParenthesis = (): Option<true> => {
-    if (lexer.peek().type === TokenType.RIGHT_PAREN) {
-      lexer.consume()
-      return some(true)
-    }
-    return none
-  }
-
-  /**
-   * Create an And node if the token is an AND operator. Return null otherwise.
-   */
-  const parseAndOp = (): Option<And> => {
-    if (lexer.peek().type === TokenType.AND) {
-      lexer.consume()
-      return some(new And())
-    }
-    return none
-  }
-
-  /**
-   * Create an Or node if the token is an OR operator. Return null otherwise.
-   */
-  const parseOrOp = (): Option<Or> => {
-    if (lexer.peek().type === TokenType.OR) {
-      lexer.consume()
-      return some(new Or())
-    }
-    return none
+]
+const parseBinary = (lexer: Lexer, level: number): Option<Expr> => {
+  if (level >= binaryOperatorMap.length) {
+    return parseUnary(lexer)
   }
 
   return pipe(
-    parseExpression(),
+    parseBinary(lexer, level + 1),
     match({
-      Some: (e) => e.value,
-      None: () => { throw new Error('Nothing to parse') }
+      Some: (oLHS) => pipe(
+        parseBinaryOperator(lexer, level),
+        match({
+          Some: (oBop) => pipe(
+            parseBinary(lexer, level),
+            match({
+              Some: (oRHS) => some(new Binary(oBop.value, oLHS.value, oRHS.value)),
+              None: () => { throw new Error('Expected right hand side of binary operation') }
+            })
+          ),
+          None: () => oLHS
+        })
+      ),
+      None: () => none
     })
   )
+}
+
+const parseUnary = (lexer: Lexer): Option<Expr> => pipe(
+  parseCall(lexer)
+)
+
+const parseCall = (lexer: Lexer): Option<Expr> => pipe(
+  parseTerm(lexer),
+  match({
+    Some: (oTerm) => {
+      const term = oTerm.value
+      if (lexer.peek().type === TokenType.LEFT_PAREN) {
+        lexer.consume()
+        const args: Expr = parseExpr(lexer)
+        if (lexer.peek().type === TokenType.RIGHT_PAREN) {
+          lexer.consume()
+          return some(new Call(term, args))
+        }
+        throw new Error('Missing right parenthesis')
+      }
+
+      return oTerm
+    },
+    None: () => { throw new Error('Should be unreachable') }
+  })
+)
+
+const parseTerm = (lexer: Lexer): Option<Expr> => pipe(
+  parseVar(lexer),
+  match<Option<Expr>, Option<Expr>>({
+    Some: (e) => e,
+    None: () => parseBool(lexer)
+  }),
+  match<Option<Expr>, Option<Expr>>({
+    Some: (e) => e,
+    None: () => parseString(lexer)
+  }),
+  match<Option<Expr>, Option<Expr>>({
+    Some: (e) => e,
+    None: () => {
+      if (lexer.peek().type === TokenType.LEFT_PAREN) {
+        lexer.consume()
+        const e: Expr = parseExpr(lexer)
+        if (lexer.peek().type === TokenType.RIGHT_PAREN) {
+          lexer.consume()
+          return some(e)
+        }
+
+        throw new Error('Missing right parenthesis')
+      }
+      return some(new Empty())
+    }
+  })
+)
+
+const parseVar = (lexer: Lexer): Option<Expr> => {
+  if (lexer.peek().type === TokenType.IDENT) {
+    return some(new Var(lexer.consume().symbol))
+  }
+  return none
+}
+
+const parseBool = (lexer: Lexer): Option<Expr> => {
+  if (lexer.peek().type === TokenType.BOOLEAN) {
+    return some(new B(lexer.consume().symbol === 'TRUE'))
+  }
+  return none
+}
+
+const parseString = (lexer: Lexer): Option<Expr> => {
+  if (lexer.peek().type === TokenType.STRING) {
+    return some(new S(lexer.consume().symbol))
+  }
+  return none
+}
+
+const parseBinaryOperator = (lexer: Lexer, level: number): Option<Expr> => {
+  const operators: any = binaryOperatorMap[level]
+  if (lexer.peek().type in operators) {
+    return some(new operators[lexer.consume().type]())
+  }
+  return none
 }
 
 export default parse

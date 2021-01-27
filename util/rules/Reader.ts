@@ -38,7 +38,7 @@ class Reader {
   }
 
   getCursorLocation (): number {
-    return this.i
+    return this.i + 1
   }
 }
 
