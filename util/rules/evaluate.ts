@@ -1,12 +1,15 @@
 import { Option, some, none } from 'fp-ts/lib/Option'
+import { pipe } from 'fp-ts/lib/pipeable'
 import { match, matchW } from 'pattern-matching-ts/match'
 
 import {
-  Expr,
   B,
   Binary,
-  Var,
-  Bop
+  Bop,
+  Call,
+  Expr,
+  Function,
+  Var
 } from './AST'
 
 class ActivationRecord {
@@ -86,15 +89,17 @@ export const toString = (e: Expr): string => {
  * @param {object} mem A map of names to values
  */
 const evaluate = (env: Env, e: Expr): Expr => {
-  return match<Expr, Expr>({
+  return matchW('_tag')({
     B: () => e,
     S: () => e,
-    Var: (e: Expr) => {
+    Empty: () => e,
+    Var: (e) => {
       const { name } = e as Var
       return lookup(env, name)
     },
-    Binary: (e: Expr) => {
+    Binary: (e) => {
       const { op, lhs, rhs } = e as Binary
+
       return match<Bop, B>({
         And: () => new B(toBoolean(evaluate(env, lhs)) && toBoolean(evaluate(env, rhs))),
         Or: () => new B(toBoolean(evaluate(env, lhs)) || toBoolean(evaluate(env, rhs))),
@@ -110,22 +115,40 @@ const evaluate = (env: Env, e: Expr): Expr => {
         })(lhs)
       })(op)
     },
-    // Call: (e) => {
-    //   const { func, args } = e as Call
+    Call: (e) => {
+      const { func, args } = e as Call
 
-    //   const ar: ActivationRecord = new ActivationRecord()
-    //   const { body, params } = lookup(env, func.name) as Function
-    //   params.forEach((param, i) => ar.bind(param.name, evaluate(env, args[i])))
+      return pipe(
+        evaluate(env, func),
+        match<Expr, Expr>({
+          Function: (e) => {
+            const seqToArray = (seq: Expr): Expr[] => matchW('_tag')({
+              Binary: (binary) => {
+                const { op, lhs, rhs } = binary as Binary
+                return matchW('_tag')({
+                  Seq: () => [evaluate(env, lhs)].concat(seqToArray(rhs)),
+                  _: () => [evaluate(env, seq)]
+                })(op)
+              },
+              _: () => [evaluate(env, seq)]
+            })(seq)
+            const { body, params } = e as Function
+            const evaluatedArgs: Expr[] = seqToArray(args)
 
-    //   env.stack.push(ar)
-    //   const result: Expr = evaluate(env, body)
-    //   env.stack.pop()
+            const ar: ActivationRecord = new ActivationRecord()
+            params.forEach((param, i) => ar.bind(param.name, evaluatedArgs[i]))
 
-    //   return result
-    // },
-    _: () => {
-      throw new Error(`Could not match expression: ${e.dump()}`)
-    }
+            env.stack.push(ar)
+            const result: Expr = evaluate(env, body)
+            env.stack.pop()
+
+            return result
+          },
+          _: (e) => { throw new Error(`Cannot call value [${e.dump()}]`) }
+        })
+      )
+    },
+    _: () => { throw new Error(`Could not match expression: ${e.dump()}`) }
   })(e)
 }
 

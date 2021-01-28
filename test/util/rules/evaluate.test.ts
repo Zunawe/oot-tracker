@@ -87,7 +87,7 @@ describe('evaluate', () => {
     })
   })
 
-  describe.skip('Function Calls', () => {
+  describe('Function Calls', () => {
     it('should call a simple function with no parameters', () => {
       env.mem['returnFalse'] = new Function(parse('FALSE'), [])
       expect(toBoolean(evaluate(env, parse('returnFalse()')))).toBe(false)
