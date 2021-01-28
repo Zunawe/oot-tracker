@@ -20,8 +20,9 @@ export interface Token {
 
 /**
  * Create a token object from the type and symbol.
- * @param {string} type The type of token (AND, IDENT, (, etc...)
- * @param {symbol} symbol The string representation of this token
+ * @param {TokenType} type The type of token (AND, IDENT, (, etc...)
+ * @param {string} symbol The string representation of this token
+ * @returns {Token}
  */
 const token = (type: TokenType, symbol: string): Token => ({ type, symbol })
 
@@ -42,7 +43,7 @@ class Lexer {
 
   /**
    * Get the name of a symbol at the current cursor position. Does not consume.
-   * @returns The name of a symbol at the current cursor position
+   * @returns {string} The name of a symbol at the current cursor position
    */
   private getName (): string {
     let k = 1
@@ -132,7 +133,7 @@ class Lexer {
   /**
    * Check the value of a single token later in the list
    * @param {number} k The number of tokens forward to look
-   * @returns {string} The token at position k from the cursor
+   * @returns {Token} The token at position k from the cursor
    */
   peek (k = 1): Token {
     return this.tokens[this.i + k]
@@ -140,8 +141,8 @@ class Lexer {
 
   /**
    * Move the cursor forward k spaces and return the last token
-   * @param {number} k The number of tokens forward to consume
-   * @returns {string} The token at position k from the cursor
+   * @param k The number of tokens forward to consume
+   * @returns The token at position k from the cursor
    */
   consume (k = 1): Token {
     this.i += k

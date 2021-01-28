@@ -85,8 +85,9 @@ export const toString = (e: Expr): string => {
 
 /**
  * Eval an expression
- * @param {Expr} expr An AST node to evaluate
- * @param {object} mem A map of names to values
+ * @param env The environment to evaluate the expression in context of
+ * @param e The expression to evaluate
+ * @returns The expression reduced as much as possible
  */
 const evaluate = (env: Env, e: Expr): Expr => {
   return matchW('_tag')({
@@ -153,23 +154,24 @@ const evaluate = (env: Env, e: Expr): Expr => {
 }
 
 /**
- * Get a variable from memory
- * @param {Var} expr An AST node to evaluate
- * @param {object} mem A map of names to values
+ * Get a variable from memory. First checks the stack, then checks global memory.
+ * @param env The environment to  lookup the symbol in
+ * @param {string} symbol The symbol to look up
+ * @returns The expression bound to the provided symbol.
  */
-const lookup = (env: Env, name: string): Expr => {
+const lookup = (env: Env, symbol: string): Expr => {
   const value: Option<Expr> = match<Option<ActivationRecord>, Option<Expr>>({
-    Some: ({ value }) => value.get(name),
+    Some: ({ value }) => value.get(symbol),
     None: () => none
   })(env.stack.peek())
 
   return match<Option<Expr>, Expr>({
     Some: ({ value }) => value,
     None: () => {
-      if (name in env.mem) {
-        return env.mem[name]
+      if (symbol in env.mem) {
+        return env.mem[symbol]
       }
-      throw new Error(`Undefined variable: ${name}`)
+      throw new Error(`Undefined variable: ${symbol}`)
     }
   })(value)
 }

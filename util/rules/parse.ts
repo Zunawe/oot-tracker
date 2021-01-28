@@ -43,6 +43,12 @@ import {
  * s = '"' {?all_characters? - '"'} '"'
  * empty = "";
  */
+
+/**
+ * Parses a string into an abstract syntax tree
+ * @param input The string to parse
+ * @returns The root of the parsed tree
+ */
 const parse = (input: string): Expr => {
   const lexer: Lexer = new Lexer(input)
   return parseExpr(lexer)
