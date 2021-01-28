@@ -5,10 +5,10 @@ import { match, matchW } from 'pattern-matching-ts/match'
 import {
   B,
   Binary,
-  Bop,
   Call,
   Expr,
   Function,
+  S,
   Var
 } from './AST'
 
@@ -98,22 +98,26 @@ const evaluate = (env: Env, e: Expr): Expr => {
       const { name } = e as Var
       return lookup(env, name)
     },
-    Binary: (e) => {
-      const { op, lhs, rhs } = e as Binary
+    Binary: (e: Binary) => {
+      const { op, lhs, rhs } = e
+      const e1p = evaluate(env, lhs)
+      const e2p = evaluate(env, rhs)
 
-      return match<Bop, B>({
+      return matchW('_tag')({
         And: () => new B(toBoolean(evaluate(env, lhs)) && toBoolean(evaluate(env, rhs))),
         Or: () => new B(toBoolean(evaluate(env, lhs)) || toBoolean(evaluate(env, rhs))),
-        EqualTo: () => match<Expr, B>({
-          B: (b1) => match<Expr, B>({
-            B: (b2) => new B(toBoolean(b1) === toBoolean(b2)),
+        EqualTo: () => matchW('_tag')({
+          B: (b1: B) => matchW('_tag')({
+            B: (b2: B) => new B(toBoolean(b1) === toBoolean(b2)),
             _: () => { throw new Error('Cannot compare boolean and ' + rhs.dump()) }
-          })(rhs),
-          S: (s1) => match<Expr, B>({
-            S: (s2) => new B(toString(s1) === toString(s2)),
+          })(e2p),
+          S: (s1: S) => matchW('_tag')({
+            S: (s2: S) => new B(toString(s1) === toString(s2)),
             _: () => { throw new Error('Cannot compare string and ' + rhs.dump()) }
-          })(rhs)
-        })(lhs)
+          })(e2p),
+          _: () => { throw new Error(`Could not match expr to value: ${e.dump()}`) }
+        })(e1p),
+        _: () => { throw new Error(`Can't use operator [${op.dump()}]: ${e.dump()}`) }
       })(op)
     },
     Call: (e) => {

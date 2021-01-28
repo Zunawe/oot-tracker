@@ -94,21 +94,28 @@ describe('evaluate', () => {
     })
 
     it('should call a function with one parameter', () => {
-      env.mem['identity'] = new Function(parse('param1'), [<Var>parse('param1')])
+      env.mem['identity'] = new Function(parse('param1'), [parse('param1') as Var])
       expect(toBoolean(evaluate(env, parse('identity(TRUE)')))).toBe(true)
       expect(toBoolean(evaluate(env, parse('identity(FALSE)')))).toBe(false)
     })
 
     it('should call a function with multiple parameters', () => {
-      env.mem['orFunction'] = new Function(parse('param1 OR param2'), [<Var>parse('param1'), <Var>parse('param2')])
+      env.mem['orFunction'] = new Function(parse('param1 OR param2'), [parse('param1') as Var, parse('param2') as Var])
       expect(toBoolean(evaluate(env, parse('orFunction(TRUE, FALSE)')))).toBe(true)
       expect(toBoolean(evaluate(env, parse('orFunction(FALSE, FALSE)')))).toBe(false)
     })
 
     it('should call a function with complex arguments', () => {
-      env.mem['identity'] = new Function(parse('param1'), [<Var>parse('param1')])
+      env.mem['identity'] = new Function(parse('param1'), [parse('param1') as Var])
       expect(toBoolean(evaluate(env, parse('identity(TRUE AND (FALSE OR TRUE))')))).toBe(true)
       expect(toBoolean(evaluate(env, parse('identity(TRUE AND (FALSE OR FALSE))')))).toBe(false)
+    })
+
+    it('should call a function that calls a function', () => {
+      env.mem['f1'] = new Function(parse('f2(param1) AND param1'), [parse('param1') as Var])
+      env.mem['f2'] = new Function(parse('param2 == TRUE'), [parse('param2') as Var])
+      expect(toBoolean(evaluate(env, parse('f1(TRUE))')))).toBe(true)
+      expect(toBoolean(evaluate(env, parse('f1(FALSE))')))).toBe(false)
     })
   })
 })
