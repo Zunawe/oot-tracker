@@ -41,14 +41,14 @@ export class S extends Expr {
   }
 }
 
-export class Function extends Expr {
-  readonly _tag: string = 'Function'
-  readonly body: Expr
+export class Func extends Expr {
+  readonly _tag: string = 'Func'
+  readonly e: Expr
   readonly params: Var[]
 
-  constructor (body: Expr, params: Var[]) {
+  constructor (e: Expr, params: Var[]) {
     super()
-    this.body = body
+    this.e = e
     this.params = params
   }
 
@@ -56,57 +56,57 @@ export class Function extends Expr {
     const paramsString: string = this.params.reduce((acc, param, i, arr) => {
       return acc + param.dump() + (i < arr.length - 1 ? ', ' : '')
     }, '')
-    return `(${paramsString}) { ${this.body.dump()} }`
+    return `(${paramsString}) { ${this.e.dump()} }`
   }
 }
 
 export class Call extends Expr {
   readonly _tag: string = 'Call'
-  readonly func: Expr
-  readonly args: Expr
+  readonly e1: Expr
+  readonly e2: Expr
 
-  constructor (func: Expr, args: Expr) {
+  constructor (e1: Expr, e2: Expr) {
     super()
-    this.func = func
-    this.args = args
+    this.e1 = e1
+    this.e2 = e2
   }
 
   dump (): string {
-    return `${this.func.dump()}(${this.args.dump()})`
+    return `${this.e1.dump()}(${this.e2.dump()})`
   }
 }
 
 export class Binary extends Expr {
   readonly _tag: string = 'Binary'
   readonly op: Bop
-  readonly lhs: Expr
-  readonly rhs: Expr
+  readonly e1: Expr
+  readonly e2: Expr
 
-  constructor (op: Bop, lhs: Expr, rhs: Expr) {
+  constructor (op: Bop, e1: Expr, e2: Expr) {
     super()
     this.op = op
-    this.lhs = lhs
-    this.rhs = rhs
+    this.e1 = e1
+    this.e2 = e2
   }
 
   dump (): string {
     return this.op._tag === 'Seq'
-      ? `${this.lhs.dump()}${this.op.dump()} ${this.rhs.dump()}`
-      : `(${this.lhs.dump()} ${this.op.dump()} ${this.rhs.dump()})`
+      ? `${this.e1.dump()}${this.op.dump()} ${this.e2.dump()}`
+      : `(${this.e1.dump()} ${this.op.dump()} ${this.e2.dump()})`
   }
 }
 
 export class Var extends Expr {
   readonly _tag: string = 'Var'
-  readonly name: string
+  readonly x: string
 
-  constructor (name: string) {
+  constructor (x: string) {
     super()
-    this.name = name
+    this.x = x
   }
 
   dump (): string {
-    return this.name
+    return this.x
   }
 }
 

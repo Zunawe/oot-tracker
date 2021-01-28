@@ -7,7 +7,7 @@ import {
   Binary,
   Call,
   Expr,
-  Function,
+  Func,
   S,
   Var
 } from './AST'
@@ -95,56 +95,56 @@ const evaluate = (env: Env, e: Expr): Expr => {
     S: () => e,
     Empty: () => e,
     Var: (e) => {
-      const { name } = e as Var
-      return lookup(env, name)
+      const { x } = e as Var
+      return lookup(env, x)
     },
     Binary: (e: Binary) => {
-      const { op, lhs, rhs } = e
-      const e1p = evaluate(env, lhs)
-      const e2p = evaluate(env, rhs)
+      const { op, e1, e2 } = e
+      const v1 = evaluate(env, e1)
+      const v2 = evaluate(env, e2)
 
       return matchW('_tag')({
-        And: () => new B(toBoolean(evaluate(env, lhs)) && toBoolean(evaluate(env, rhs))),
-        Or: () => new B(toBoolean(evaluate(env, lhs)) || toBoolean(evaluate(env, rhs))),
+        And: () => new B(toBoolean(v1) && toBoolean(v2)),
+        Or: () => new B(toBoolean(evaluate(env, e1)) || toBoolean(evaluate(env, e2))),
         EqualTo: () => matchW('_tag')({
           B: (b1: B) => matchW('_tag')({
             B: (b2: B) => new B(toBoolean(b1) === toBoolean(b2)),
-            _: () => { throw new Error('Cannot compare boolean and ' + rhs.dump()) }
-          })(e2p),
+            _: () => { throw new Error('Cannot compare boolean and ' + e2.dump()) }
+          })(v2),
           S: (s1: S) => matchW('_tag')({
             S: (s2: S) => new B(toString(s1) === toString(s2)),
-            _: () => { throw new Error('Cannot compare string and ' + rhs.dump()) }
-          })(e2p),
+            _: () => { throw new Error('Cannot compare string and ' + e2.dump()) }
+          })(v2),
           _: () => { throw new Error(`Could not match expr to value: ${e.dump()}`) }
-        })(e1p),
+        })(v1),
         _: () => { throw new Error(`Can't use operator [${op.dump()}]: ${e.dump()}`) }
       })(op)
     },
-    Call: (e) => {
-      const { func, args } = e as Call
+    Call: (e: Call) => {
+      const { e1, e2 } = e
 
       return pipe(
-        evaluate(env, func),
+        evaluate(env, e1),
         match<Expr, Expr>({
-          Function: (e) => {
+          Func: (func) => {
             const seqToArray = (seq: Expr): Expr[] => matchW('_tag')({
               Binary: (binary) => {
-                const { op, lhs, rhs } = binary as Binary
+                const { op, e1, e2 } = binary as Binary
                 return matchW('_tag')({
-                  Seq: () => [evaluate(env, lhs)].concat(seqToArray(rhs)),
+                  Seq: () => [evaluate(env, e1)].concat(seqToArray(e2)),
                   _: () => [evaluate(env, seq)]
                 })(op)
               },
               _: () => [evaluate(env, seq)]
             })(seq)
-            const { body, params } = e as Function
-            const evaluatedArgs: Expr[] = seqToArray(args)
+            const { e, params } = func as Func
+            const evaluatedArgs: Expr[] = seqToArray(e2)
 
             const ar: ActivationRecord = new ActivationRecord()
-            params.forEach((param, i) => ar.bind(param.name, evaluatedArgs[i]))
+            params.forEach((param, i) => ar.bind(param.x, evaluatedArgs[i]))
 
             env.stack.push(ar)
-            const result: Expr = evaluate(env, body)
+            const result: Expr = evaluate(env, e)
             env.stack.pop()
 
             return result
