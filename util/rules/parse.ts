@@ -83,13 +83,13 @@ const parseSeq = (lexer: Lexer): Option<Expr> => pipe(
 
 const binaryOperatorMap = [
   {
-    [TokenType.EQUAL_TO]: EqualTo
-  },
-  {
     [TokenType.OR]: Or
   },
   {
     [TokenType.AND]: And
+  },
+  {
+    [TokenType.EQUAL_TO]: EqualTo
   }
 ]
 const parseBinary = (lexer: Lexer, level: number): Option<Expr> => {
