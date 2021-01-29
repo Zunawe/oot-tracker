@@ -37,7 +37,7 @@ export class S extends Expr {
   }
 
   dump (): string {
-    return `'${this.s}'`
+    return `"${this.s}"`
   }
 }
 

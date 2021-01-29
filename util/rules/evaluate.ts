@@ -18,14 +18,14 @@ import match from '../match'
 export const toBoolean = (e: Expr): boolean => pipe(
   e, match<Expr, boolean>({
     B: ({ b }: B) => b,
-    _: () => { throw new Error(`Cannot interpret expression as boolean: ${e?.dump?.()}`) }
+    _: () => { throw new Error(`Cannot interpret expression as boolean: ${e.dump()}`) }
   })
 )
 
 export const toString = (e: Expr): string => pipe(
   e, match<Expr, string>({
     S: ({ s }: S) => s,
-    _: () => { throw new Error(`Cannot interpret expression as string: ${e?.dump?.()}`) }
+    _: () => { throw new Error(`Cannot interpret expression as string: ${e.dump()}`) }
   })
 )
 
