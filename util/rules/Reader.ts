@@ -25,6 +25,7 @@ class Reader {
    * @returns The character at position k from the cursor
    */
   consume (k = 1): string {
+    if (this.isEOF(k)) throw new Error(`Out of bounds! Tried to read past end of input\n${this.input}`)
     this.i += k
     return this.input.charAt(this.i)
   }
