@@ -2,6 +2,8 @@ import { Expr, BuiltInFunc, S } from './AST'
 import { Option, some, none } from 'fp-ts/lib/Option'
 import parse from './parse'
 import evaluate from './evaluate'
+import match from '../match'
+import { pipe } from 'fp-ts/lib/pipeable'
 
 export class ActivationRecord {
   members: {
@@ -59,10 +61,12 @@ export default class Env {
       eval: new BuiltInFunc((e: Expr[]): Expr => {
         if (e.length !== 1) throw new Error('Wrong number of arguments to eval')
 
-        switch (e[0]._tag) {
-          case 'S': return evaluate(this, parse((e[0] as S).s))
-          default: throw new Error('Cannot eval anything but a string')
-        }
+        return pipe(
+          e[0], match<Expr, Expr>({
+            S: ({ s }: S) => evaluate(this, parse((e[0] as S).s)),
+            _: () => { throw new Error('Cannot eval anything but a string') }
+          })
+        )
       })
     }
     this.stack = new Stack()

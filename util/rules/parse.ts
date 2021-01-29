@@ -1,4 +1,4 @@
-import { Option, some, none } from 'fp-ts/Option'
+import { Option, Some, some, none } from 'fp-ts/Option'
 import { pipe } from 'fp-ts/lib/function'
 
 import Lexer, { TokenType } from './Lexer'
@@ -6,6 +6,7 @@ import {
   And,
   B,
   Binary,
+  Bop,
   Call,
   Empty,
   EqualTo,
@@ -15,6 +16,7 @@ import {
   Seq,
   Var
 } from './AST'
+import match from '../match'
 
 /**
  * letter = "a" | "b" | "c" | "d" | "e" | "f" |
@@ -54,36 +56,29 @@ const parse = (input: string): Expr => {
 }
 
 const parseExpr = (lexer: Lexer): Expr => pipe(
-  parseSeq(lexer),
-  (e) => {
-    switch (e._tag) {
-      case 'Some': return e.value
-      case 'None': return new Empty()
-    }
-  }
+  parseSeq(lexer), match<Option<Expr>, Expr>({
+    Some: ({ value }: Some<Expr>) => value,
+    None: () => new Empty()
+  })
 )
 
 const parseSeq = (lexer: Lexer): Option<Expr> => pipe(
-  parseBinary(lexer, 0),
-  (e1) => {
-    switch (e1._tag) {
-      case 'Some':
-        if (lexer.peek().type === TokenType.COMMA) {
-          lexer.consume()
-          return pipe(
-            parseBinary(lexer, 0),
-            (e2) => {
-              switch (e2._tag) {
-                case 'Some': return some(new Binary(new Seq(), e1.value, e2.value))
-                case 'None': throw new Error('Expected expression after ","')
-              }
-            }
-          )
-        }
-        return e1
-      case 'None': return none
-    }
-  }
+  parseBinary(lexer, 0), match<Option<Expr>, Option<Expr>>({
+    Some: (e1: Some<Expr>) => {
+      if (lexer.peek().type === TokenType.COMMA) {
+        lexer.consume()
+        return pipe(
+          parseBinary(lexer, 0), match<Option<Expr>, Option<Expr>>({
+            Some: (e2) => some(new Binary(new Seq(), e1.value, e2.value)),
+            None: () => { throw new Error('Expected expression after ","') }
+          })
+        )
+      }
+
+      return e1
+    },
+    None: () => none
+  })
 )
 
 const binaryOperatorMap = [
@@ -103,29 +98,20 @@ const parseBinary = (lexer: Lexer, level: number): Option<Expr> => {
   }
 
   return pipe(
-    parseBinary(lexer, level + 1),
-    (e1) => {
-      switch (e1._tag) {
-        case 'Some': return pipe(
-          parseBinaryOperator(lexer, level),
-          (bop) => {
-            switch (bop._tag) {
-              case 'Some': return pipe(
-                parseBinary(lexer, level),
-                (e2) => {
-                  switch (e2._tag) {
-                    case 'Some': return some(new Binary(bop.value, e1.value, e2.value))
-                    case 'None': throw new Error('Expected right hand side of binary operation')
-                  }
-                }
-              )
-              case 'None': return e1
-            }
-          }
-        )
-        case 'None': return none
-      }
-    }
+    parseBinary(lexer, level + 1), match<Option<Expr>, Option<Expr>>({
+      Some: (e1: Some<Expr>) => pipe(
+        parseBinaryOperator(lexer, level), match<Option<Bop>, Option<Expr>>({
+          Some: (bop: Some<Bop>) => pipe(
+            parseBinary(lexer, level), match<Option<Expr>, Option<Expr>>({
+              Some: (e2: Some<Expr>) => some(new Binary(bop.value, e1.value, e2.value)),
+              None: () => { throw new Error('Expected right hand side of binary operation') }
+            })
+          ),
+          None: () => e1
+        })
+      ),
+      None: () => none
+    })
   )
 }
 
@@ -134,57 +120,53 @@ const parseUnary = (lexer: Lexer): Option<Expr> => pipe(
 )
 
 const parseCall = (lexer: Lexer): Option<Expr> => pipe(
-  parseTerm(lexer),
-  (e) => {
-    switch (e._tag) {
-      case 'Some':
-        if (lexer.peek().type === TokenType.LEFT_PAREN) {
+  parseTerm(lexer), match<Option<Expr>, Option<Expr>>({
+    Some: (e: Some<Expr>) => {
+      if (lexer.peek().type === TokenType.LEFT_PAREN) {
+        lexer.consume()
+
+        const args: Expr = parseExpr(lexer)
+        if (lexer.peek().type === TokenType.RIGHT_PAREN) {
           lexer.consume()
-          const args: Expr = parseExpr(lexer)
-          if (lexer.peek().type === TokenType.RIGHT_PAREN) {
-            lexer.consume()
-            return some(new Call(e.value, args))
-          }
-          throw new Error('Missing right parenthesis')
+          return some(new Call(e.value, args))
         }
 
-        return e
-      case 'None': throw new Error('Should be unreachable')
-    }
-  }
+        throw new Error('Missing right parenthesis')
+      }
+
+      return e
+    },
+    None: () => { throw new Error('Should be unreachable') }
+  })
 )
 
 const parseTerm = (lexer: Lexer): Option<Expr> => pipe(
-  parseVar(lexer),
-  (e) => {
-    switch (e._tag) {
-      case 'Some': return e
-      case 'None': return parseBool(lexer)
-    }
-  },
-  (e) => {
-    switch (e._tag) {
-      case 'Some': return e
-      case 'None': return parseString(lexer)
-    }
-  },
-  (e) => {
-    switch (e._tag) {
-      case 'Some': return e
-      case 'None':
-        if (lexer.peek().type === TokenType.LEFT_PAREN) {
-          lexer.consume()
-          const e: Expr = parseExpr(lexer)
-          if (lexer.peek().type === TokenType.RIGHT_PAREN) {
-            lexer.consume()
-            return some(e)
-          }
+  parseVar(lexer), match<Option<Expr>, Option<Expr>>({
+    Some: (e: Some<Expr>) => e,
+    None: () => parseBool(lexer)
+  }),
+  match<Option<Expr>, Option<Expr>>({
+    Some: (e: Some<Expr>) => e,
+    None: () => parseString(lexer)
+  }),
+  match<Option<Expr>, Option<Expr>>({
+    Some: (e: Some<Expr>) => e,
+    None: () => {
+      if (lexer.peek().type === TokenType.LEFT_PAREN) {
+        lexer.consume()
 
-          throw new Error('Missing right parenthesis')
+        const e: Expr = parseExpr(lexer)
+        if (lexer.peek().type === TokenType.RIGHT_PAREN) {
+          lexer.consume()
+          return some(e)
         }
-        return some(new Empty())
+
+        throw new Error('Missing right parenthesis')
+      }
+
+      return some(new Empty())
     }
-  }
+  })
 )
 
 const parseVar = (lexer: Lexer): Option<Expr> => {
