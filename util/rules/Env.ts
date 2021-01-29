@@ -63,10 +63,16 @@ export default class Env {
 
         return pipe(
           e[0], match<Expr, Expr>({
-            S: ({ s }: S) => evaluate(this, parse((e[0] as S).s)),
+            S: ({ s }: S) => evaluate(this, parse(s)),
             _: () => { throw new Error('Cannot eval anything but a string') }
           })
         )
+      }),
+      debug: new BuiltInFunc((e: Expr[]): Expr => {
+        if (e.length !== 1) throw new Error('Wrong number of arguments to debug')
+        console.log(`DEBUG: ${e[0].dump()}`)
+
+        return e[0]
       })
     }
     this.stack = new Stack()
