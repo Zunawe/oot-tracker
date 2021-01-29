@@ -2,11 +2,12 @@
  * Reader for an input to be parsed.
  */
 class Reader {
-  private readonly input: string
-  private i: number = -1
+  readonly input: string
+  private i: number
 
   constructor (input: string) {
     this.input = input
+    this.i = -1
   }
 
   /**

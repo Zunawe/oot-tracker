@@ -1,6 +1,5 @@
 import { Option, some, none } from 'fp-ts/lib/Option'
 import { pipe } from 'fp-ts/lib/pipeable'
-import { match, matchW } from 'pattern-matching-ts/match'
 
 import {
   B,
@@ -68,11 +67,12 @@ export class Env {
   constructor () {
     this.mem = {
       eval: new BuiltInFunc((e: Expr[]): Expr => {
-        if (e.length !== 1) { throw new Error('Wrong number of arguments to eval') }
-        return matchW('_tag')({
-          S: ({ s }) => evaluate(this, parse(s)),
-          _: () => { throw new Error('Cannot eval anything but a string') }
-        })(e[0])
+        if (e.length !== 1) throw new Error('Wrong number of arguments to eval')
+
+        switch (e[0]._tag) {
+          case 'S': return evaluate(this, parse((e[0] as S).s))
+          default: throw new Error('Cannot eval anything but a string')
+        }
       })
     }
     this.stack = new Stack()
@@ -80,29 +80,34 @@ export class Env {
 }
 
 export const toBoolean = (e: Expr): boolean => {
-  return matchW('_tag')({
-    B: ({ b }) => b,
-    _: () => { throw new Error(`Cannot interpret expression as boolean: ${e?.dump?.()}`) }
-  })(e)
+  switch (e._tag) {
+    case 'B': return (e as B).b
+    default: throw new Error(`Cannot interpret expression as boolean: ${e?.dump?.()}`)
+  }
 }
 
 export const toString = (e: Expr): string => {
-  return matchW('_tag')({
-    S: ({ s }) => s,
-    _: () => { throw new Error(`Cannot interpret expression as string: ${e?.dump?.()}`) }
-  })(e)
+  switch (e._tag) {
+    case 'S': return (e as S).s
+    default: throw new Error(`Cannot interpret expression as string: ${e?.dump?.()}`)
+  }
 }
 
-const seqToArray = (seq: Expr): Expr[] => matchW('_tag')({
-  Binary: (binary) => {
-    const { op, e1, e2 } = binary as Binary
-    return matchW('_tag')({
-      Seq: () => [e1].concat(seqToArray(e2)),
-      _: () => [seq]
-    })(op)
-  },
-  _: () => [seq]
-})(seq)
+const seqToArray = (e: Expr): Expr[] => {
+  let op, e1, e2
+
+  switch (e._tag) {
+    case 'Binary':
+      op = (e as Binary).op
+      e1 = (e as Binary).e1
+      e2 = (e as Binary).e2
+      switch (op._tag) {
+        case 'Seq': return [e1].concat(seqToArray(e2))
+        default: return [e]
+      }
+    default: return [e]
+  }
+}
 
 /**
  * Eval an expression
@@ -111,67 +116,78 @@ const seqToArray = (seq: Expr): Expr[] => matchW('_tag')({
  * @returns The expression reduced as much as possible
  */
 const evaluate = (env: Env, e: Expr): Expr => {
-  return matchW('_tag')({
-    B: () => e,
-    S: () => e,
-    Empty: () => e,
-    Var: (e) => {
-      const { x } = e as Var
+  let x, op, e1: Expr, e2: Expr, v1: Expr, v2: Expr
+  switch (e._tag) {
+    case 'B':
+    case 'S':
+    case 'Empty':
+      return e
+    case 'Var':
+      x = (e as Var).x
       return lookup(env, x)
-    },
-    Binary: (e: Binary) => {
-      const { op, e1, e2 } = e
-      const v1 = evaluate(env, e1)
-      const v2 = evaluate(env, e2)
+    case 'Binary':
+      op = (e as Binary).op
+      e1 = (e as Binary).e1
+      e2 = (e as Binary).e2
+      v1 = evaluate(env, e1)
+      v2 = evaluate(env, e2)
 
-      return matchW('_tag')({
-        And: () => new B(toBoolean(v1) && toBoolean(v2)),
-        Or: () => new B(toBoolean(evaluate(env, e1)) || toBoolean(evaluate(env, e2))),
-        EqualTo: () => matchW('_tag')({
-          B: (b1: B) => matchW('_tag')({
-            B: (b2: B) => new B(toBoolean(b1) === toBoolean(b2)),
-            _: () => { throw new Error('Cannot compare boolean and ' + e2.dump()) }
-          })(v2),
-          S: (s1: S) => matchW('_tag')({
-            S: (s2: S) => new B(toString(s1) === toString(s2)),
-            _: () => { throw new Error('Cannot compare string and ' + e2.dump()) }
-          })(v2),
-          _: () => { throw new Error(`Could not match expr to value: ${e.dump()}`) }
-        })(v1),
-        _: () => { throw new Error(`Can't use operator [${op.dump()}]: ${e.dump()}`) }
-      })(op)
-    },
-    Call: (e: Call) => {
-      const { e1, e2 } = e
+      switch (op._tag) {
+        case 'And': return new B(toBoolean(v1) && toBoolean(v2))
+        case 'Or': return new B(toBoolean(evaluate(env, e1)) || toBoolean(evaluate(env, e2)))
+        case 'EqualTo':
+          switch (v1._tag) {
+            case 'B':
+              switch (v2._tag) {
+                case 'B': return new B(toBoolean(v1) === toBoolean(v2))
+                default: throw new Error('Cannot compare boolean and ' + v2.dump())
+              }
+            case 'S':
+              switch (v2._tag) {
+                case 'S': return new B(toString(v1) === toString(v2))
+                default: throw new Error('Cannot compare string and ' + v2.dump())
+              }
+            default: throw new Error(`Could not match expr to value: ${e.dump()}`)
+          }
+        default: throw new Error(`Can't use operator [${op.dump()}]: ${e.dump()}`)
+      }
+    case 'Call':
+      e1 = (e as Call).e1
+      e2 = (e as Call).e2
 
       return pipe(
         evaluate(env, e1),
-        match<Expr, Expr>({
-          Func: (func) => {
-            const { e, params } = func as Func
-            const argList: Expr[] = seqToArray(e2)
+        (func) => {
+          let body, params, argList: Expr[], f
 
-            const ar: ActivationRecord = new ActivationRecord()
-            params.forEach((param, i) => ar.bind(param.x, evaluate(env, argList[i])))
+          let ar: ActivationRecord
+          let result: Expr
 
-            env.stack.push(ar)
-            const result: Expr = evaluate(env, e)
-            env.stack.pop()
+          switch (func._tag) {
+            case 'Func':
+              body = (func as Func).body
+              params = (func as Func).params
+              argList = seqToArray(e2)
 
-            return result
-          },
-          BuiltInFunc: (func) => {
-            const { f } = func as BuiltInFunc
-            const argList: Expr[] = seqToArray(e2)
+              ar = new ActivationRecord()
+              params.forEach((param, i) => ar.bind(param.x, evaluate(env, argList[i])))
 
-            return f(argList.map((arg) => evaluate(env, arg)))
-          },
-          _: (e) => { throw new Error(`Cannot call value [${e.dump()}]`) }
-        })
+              env.stack.push(ar)
+              result = evaluate(env, body)
+              env.stack.pop()
+
+              return result
+            case 'BuiltInFunc':
+              f = (func as BuiltInFunc).f
+              argList = seqToArray(e2)
+
+              return f(argList.map((arg) => evaluate(env, arg)))
+            default: throw new Error(`Cannot call value [${e.dump()}]`)
+          }
+        }
       )
-    },
-    _: () => { throw new Error(`Could not match expression: ${e.dump()}`) }
-  })(e)
+    default: throw new Error(`Could not match expression: ${e.dump()}`)
+  }
 }
 
 /**
@@ -181,20 +197,24 @@ const evaluate = (env: Env, e: Expr): Expr => {
  * @returns The expression bound to the provided symbol.
  */
 const lookup = (env: Env, symbol: string): Expr => {
-  const value: Option<Expr> = match<Option<ActivationRecord>, Option<Expr>>({
-    Some: ({ value }) => value.get(symbol),
-    None: () => none
-  })(env.stack.peek())
+  let value: Option<Expr>
+  const ar = env.stack.peek()
+  switch (ar._tag) {
+    case 'Some':
+      value = ar.value.get(symbol)
+      break
+    case 'None':
+      value = none
+  }
 
-  return match<Option<Expr>, Expr>({
-    Some: ({ value }) => value,
-    None: () => {
+  switch (value._tag) {
+    case 'Some': return value.value
+    case 'None':
       if (symbol in env.mem) {
         return env.mem[symbol]
       }
       throw new Error(`Undefined variable: ${symbol}`)
-    }
-  })(value)
+  }
 }
 
 export default evaluate

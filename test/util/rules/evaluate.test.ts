@@ -1,5 +1,4 @@
-import { matchW } from 'pattern-matching-ts/lib/match'
-import { Expr, BuiltInFunc, Func, Var } from '../../../util/rules/AST'
+import { Func, Var } from '../../../util/rules/AST'
 import evaluate, { Env, toBoolean, toString } from '../../../util/rules/evaluate'
 import parse from '../../../util/rules/parse'
 

@@ -43,12 +43,12 @@ export class S extends Expr {
 
 export class Func extends Expr {
   readonly _tag: string = 'Func'
-  readonly e: Expr
+  readonly body: Expr
   readonly params: Var[]
 
-  constructor (e: Expr, params: Var[]) {
+  constructor (body: Expr, params: Var[]) {
     super()
-    this.e = e
+    this.body = body
     this.params = params
   }
 
@@ -56,7 +56,7 @@ export class Func extends Expr {
     const paramsString: string = this.params.reduce((acc, param, i, arr) => {
       return acc + param.dump() + (i < arr.length - 1 ? ', ' : '')
     }, '')
-    return `(${paramsString}) { ${this.e.dump()} }`
+    return `(${paramsString}) { ${this.body.dump()} }`
   }
 }
 

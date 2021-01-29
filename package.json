@@ -9,7 +9,6 @@
     "express": "^4.17.1",
     "fp-ts": "^2.9.3",
     "morgan": "^1.10.0",
-    "pattern-matching-ts": "^2.0.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "winston": "^3.3.3"

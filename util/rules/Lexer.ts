@@ -54,7 +54,7 @@ class Lexer {
     }
 
     if (buffer.length === 0) {
-      throw new Error(`Unrecognizable syntax at character [${this.reader.getCursorLocation()}]`)
+      throw new Error(`Unrecognizable syntax at char [${this.reader.getCursorLocation()}]:\n"${this.reader.input}"`)
     }
 
     return buffer
