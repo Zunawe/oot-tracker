@@ -60,6 +60,20 @@ export class Func extends Expr {
   }
 }
 
+export class BuiltInFunc extends Expr {
+  readonly _tag: string = 'BuiltInFunc'
+  readonly f: (args: Expr[]) => Expr
+
+  constructor (f: (args: Expr[]) => Expr) {
+    super()
+    this.f = f
+  }
+
+  dump (): string {
+    return 'built-in function'
+  }
+}
+
 export class Call extends Expr {
   readonly _tag: string = 'Call'
   readonly e1: Expr

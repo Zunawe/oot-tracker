@@ -5,12 +5,14 @@ import { match, matchW } from 'pattern-matching-ts/match'
 import {
   B,
   Binary,
+  BuiltInFunc,
   Call,
   Expr,
   Func,
   S,
   Var
 } from './AST'
+import parse from './parse'
 
 class ActivationRecord {
   members: {
@@ -64,7 +66,15 @@ export class Env {
   stack: Stack
 
   constructor () {
-    this.mem = {}
+    this.mem = {
+      eval: new BuiltInFunc((e: Expr[]): Expr => {
+        if (e.length !== 1) { throw new Error('Wrong number of arguments to eval') }
+        return matchW('_tag')({
+          S: ({ s }) => evaluate(this, parse(s)),
+          _: () => { throw new Error('Cannot eval anything but a string') }
+        })(e[0])
+      })
+    }
     this.stack = new Stack()
   }
 }
@@ -82,6 +92,17 @@ export const toString = (e: Expr): string => {
     _: () => { throw new Error(`Cannot interpret expression as string: ${e?.dump?.()}`) }
   })(e)
 }
+
+const seqToArray = (seq: Expr): Expr[] => matchW('_tag')({
+  Binary: (binary) => {
+    const { op, e1, e2 } = binary as Binary
+    return matchW('_tag')({
+      Seq: () => [e1].concat(seqToArray(e2)),
+      _: () => [seq]
+    })(op)
+  },
+  _: () => [seq]
+})(seq)
 
 /**
  * Eval an expression
@@ -127,27 +148,23 @@ const evaluate = (env: Env, e: Expr): Expr => {
         evaluate(env, e1),
         match<Expr, Expr>({
           Func: (func) => {
-            const seqToArray = (seq: Expr): Expr[] => matchW('_tag')({
-              Binary: (binary) => {
-                const { op, e1, e2 } = binary as Binary
-                return matchW('_tag')({
-                  Seq: () => [evaluate(env, e1)].concat(seqToArray(e2)),
-                  _: () => [evaluate(env, seq)]
-                })(op)
-              },
-              _: () => [evaluate(env, seq)]
-            })(seq)
             const { e, params } = func as Func
-            const evaluatedArgs: Expr[] = seqToArray(e2)
+            const argList: Expr[] = seqToArray(e2)
 
             const ar: ActivationRecord = new ActivationRecord()
-            params.forEach((param, i) => ar.bind(param.x, evaluatedArgs[i]))
+            params.forEach((param, i) => ar.bind(param.x, evaluate(env, argList[i])))
 
             env.stack.push(ar)
             const result: Expr = evaluate(env, e)
             env.stack.pop()
 
             return result
+          },
+          BuiltInFunc: (func) => {
+            const { f } = func as BuiltInFunc
+            const argList: Expr[] = seqToArray(e2)
+
+            return f(argList.map((arg) => evaluate(env, arg)))
           },
           _: (e) => { throw new Error(`Cannot call value [${e.dump()}]`) }
         })

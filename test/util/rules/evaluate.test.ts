@@ -1,4 +1,5 @@
-import { Func, Var } from '../../../util/rules/AST'
+import { matchW } from 'pattern-matching-ts/lib/match'
+import { Expr, BuiltInFunc, Func, Var } from '../../../util/rules/AST'
 import evaluate, { Env, toBoolean, toString } from '../../../util/rules/evaluate'
 import parse from '../../../util/rules/parse'
 
@@ -116,6 +117,24 @@ describe('evaluate', () => {
       env.mem['f2'] = new Func(parse('param2 == TRUE'), [parse('param2') as Var])
       expect(toBoolean(evaluate(env, parse('f1(TRUE))')))).toBe(true)
       expect(toBoolean(evaluate(env, parse('f1(FALSE))')))).toBe(false)
+    })
+  })
+
+  describe('eval', () => {
+    it('should eval a simple literal', () => {
+      expect(toBoolean(evaluate(env, parse('eval("FALSE")')))).toBe(false)
+    })
+
+    it('should eval an operation', () => {
+      expect(toBoolean(evaluate(env, parse('eval("FALSE OR TRUE")')))).toBe(true)
+      expect(toBoolean(evaluate(env, parse('eval("FALSE AND TRUE")')))).toBe(false)
+    })
+
+    it('should eval under the current scope', () => {
+      env.mem['VARIABLE'] = parse('FALSE')
+      expect(toBoolean(evaluate(env, parse('eval("VARIABLE")')))).toBe(false)
+      env.mem['VARIABLE'] = parse('TRUE')
+      expect(toBoolean(evaluate(env, parse('eval("VARIABLE")')))).toBe(true)
     })
   })
 })

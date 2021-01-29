@@ -34,7 +34,7 @@ import {
  * seq = binary {, binary};
  * binary = unary {bop unary};
  * unary = unary | call;
- * call = term {"(" expr ")"};
+ * call = term ["(" expr ")"];
  * term = x | b | s | empty | "(" expr ")";
  *
  * bop = "AND" | "OR" | "==";
