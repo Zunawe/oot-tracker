@@ -1,6 +1,7 @@
 import { Func, Var } from '../../../util/rules/AST'
-import evaluate, { Env, toBoolean, toString } from '../../../util/rules/evaluate'
+import evaluate, { toBoolean, toString } from '../../../util/rules/evaluate'
 import parse from '../../../util/rules/parse'
+import Env from '../../../util/rules/Env'
 
 describe('evaluate', () => {
   let env: Env
