@@ -1,7 +1,7 @@
-import { Func, Var } from '../../../util/rules/AST'
-import evaluate, { toBoolean, toString } from '../../../util/rules/evaluate'
-import parse from '../../../util/rules/parse'
-import Env from '../../../util/rules/Env'
+import { Func, Var } from '../../../../../client/js/lib/evaluator/AST'
+import evaluate, { toBoolean, toString } from '../../../../../client/js/lib/evaluator/evaluate'
+import parse from '../../../../../client/js/lib/evaluator/parse'
+import Env from '../../../../../client/js/lib/evaluator/Env'
 
 describe('evaluate', () => {
   let env: Env

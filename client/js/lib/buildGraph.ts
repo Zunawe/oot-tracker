@@ -1,12 +1,12 @@
 import fs from 'fs'
-import Env from './rules/Env'
+import Env from './evaluator/Env'
 import { pipe } from 'fp-ts/lib/pipeable'
-import evaluate from './rules/evaluate'
+import evaluate from './evaluator/evaluate'
 import match from './match'
-import helpers from '../config/helpers'
-import parse from './rules/parse'
-import { Expr, Func, Var, BuiltInFunc, S, B } from './rules/AST'
-import { checkRule } from './rules'
+import helpers from '../../../config/helpers'
+import parse from './evaluator/parse'
+import { Expr, Func, Var, BuiltInFunc, S, B } from './evaluator/AST'
+import { checkRule } from './evaluator'
 
 export interface Graph {
   edges: Array<[string, string]>

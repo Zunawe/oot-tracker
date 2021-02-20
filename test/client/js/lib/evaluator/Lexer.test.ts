@@ -1,4 +1,4 @@
-import Lexer, { Token, TokenType } from '../../../util/rules/Lexer'
+import Lexer, { Token, TokenType } from '../../../../../client/js/lib/evaluator/Lexer'
 
 describe('Lexer', () => {
 
