@@ -148,6 +148,14 @@ class Lexer {
     this.i += k
     return this.tokens[this.i]
   }
+
+  getInput (): string {
+    return this.reader.input
+  }
+
+  toString (): string {
+    return this.tokens.map(({ symbol }) => symbol).join(' ')
+  }
 }
 
 export default Lexer

@@ -131,7 +131,7 @@ const parseCall = (lexer: Lexer): Option<Expr> => pipe(
           return some(new Call(e.value, args))
         }
 
-        throw new Error('Missing right parenthesis')
+        throw new Error(`Missing right parenthesis: ${lexer.getInput()}`)
       }
 
       return e
@@ -161,7 +161,7 @@ const parseTerm = (lexer: Lexer): Option<Expr> => pipe(
           return some(e)
         }
 
-        throw new Error('Missing right parenthesis')
+        throw new Error(`Missing right parenthesis: ${lexer.getInput()}`)
       }
 
       return some(new Empty())

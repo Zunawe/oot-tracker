@@ -1,9 +1,5 @@
-import { Expr, BuiltInFunc, S } from './AST'
+import { Expr } from './AST'
 import { Option, some, none } from 'fp-ts/lib/Option'
-import parse from './parse'
-import evaluate from './evaluate'
-import match from '../match'
-import { pipe } from 'fp-ts/lib/pipeable'
 
 export class ActivationRecord {
   members: {
@@ -54,27 +50,15 @@ export default class Env {
     [key: string]: Expr
   }
 
+  state: {
+    [key: string]: any
+  }
+
   stack: Stack
 
   constructor () {
-    this.mem = {
-      eval: new BuiltInFunc((e: Expr[]): Expr => {
-        if (e.length !== 1) throw new Error('Wrong number of arguments to eval')
-
-        return pipe(
-          e[0], match<Expr, Expr>({
-            S: ({ s }: S) => evaluate(this, parse(s)),
-            _: () => { throw new Error('Cannot eval anything but a string') }
-          })
-        )
-      }),
-      debug: new BuiltInFunc((e: Expr[]): Expr => {
-        if (e.length !== 1) throw new Error('Wrong number of arguments to debug')
-        console.log(`DEBUG: ${e[0].dump()}`)
-
-        return e[0]
-      })
-    }
+    this.mem = {}
+    this.state = {}
     this.stack = new Stack()
   }
 }

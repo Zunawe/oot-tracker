@@ -1,0 +1,69 @@
+[
+  {
+    "id": "Dodongo's Cavern Beginning",
+    "location": "Dodongo's Cavern",
+    "exits": [
+      ["Death Mountain", "TRUE", "TRUE"],
+      ["Dodongo's Cavern Lobby", "canBlastOrSmash() OR STRENGTH_1", "canBlastOrSmash() OR STRENGTH_1"]
+    ],
+    "checks": {}
+  },
+  {
+    "id": "Dodongo's Cavern Lobby",
+    "location": "Dodongo's Cavern",
+    "exits": [
+      ["Dodongo's Cavern Beginning", "TRUE", "TRUE"],
+      ["Dodongo's Cavern Staircase Room", "DEKU_STICKS_1 OR (canUse(\"SPELL_DIN\") AND (SLINGSHOT_1 OR hasExplosives() OR SWORD_KOKIRI))", "TRUE"],
+      ["Dodongo's Cavern Far Bridge", "at(\"Dodongo's Cavern Far Bridge\", canUse(\"SLINGSHOT_1\"))", "at(\"Dodongo's Cavern Far Bridge\", canUse(\"SLINGSHOT_1\"))"]
+    ],
+    "checks": [
+      {
+        "id": "Dodongo's Cavern Map Chest",
+        "description": "",
+        "type": "REWARD",
+        "rules": "l_dodongosCavernLobby"
+      },
+      {
+        "id": "Dodongos Cavern GS Side Room Near Lower Lizalfos",
+        "description": "",
+        "type": "REWARD",
+        "rules": "l_dodongosCavernLobby"
+      }
+    ]
+  },
+  {
+    "id": "Dodongo's Cavern Staircase Room",
+    "location": "Dodongo's Cavern",
+    "exits": [
+      ["Dodongo's Cavern Lobby", "TRUE", "TRUE"],
+      ["Dodongo's Cavern Climb", "hasExplosives() OR STRENGTH_1 OR canUse(\"SPELL_DIN\")", "hasExplosives() OR STRENGTH_1 OR canUse(\"SPELL_DIN\") OR (logic_dc_staircase AND canUse(\"BOW_1\"))"]
+    ],
+    "checks": []
+  },
+  {
+    "id": "Dodongo's Cavern Climb",
+    "location": "Dodongo's Cavern",
+    "exits": [
+      ["Dodongo's Cavern Lobby", "TRUE", "TRUE"],
+      ["Dodongo's Cavern Far Bridge", "SLINGSHOT_1 OR (logic_dc_slingshot_skip AND (DEKU_STICKS_1 OR hasExplosives() OR SWORD_KOKIRI))", "BOW_1 OR BOOTS_HOVER OR HOOKSHOT_2 OR logic_dc_jump"]
+    ],
+    "checks": []
+  },
+  {
+    "id": "Dodongo's Cavern Far Bridge",
+    "location": "Dodongo's Cavern",
+    "exits": [
+      ["Dodongo's Cavern Boss Area", "hasExplosives()", "hasExplosives()"],
+      ["Dodongo's Cavern Lobby", "TRUE", "TRUE"]
+    ],
+    "checks": []
+  },
+  {
+    "id": "Dodongo's Cavern Boss Area",
+    "location": "Dodongo's Cavern",
+    "exits": [
+      ["Dodongo's Cavern Lobby", "TRUE", "TRUE"]
+    ],
+    "checks": []
+  }
+]
