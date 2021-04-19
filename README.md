@@ -1,0 +1,1 @@
+This project isn't really off the ground yet, and has actually served more as a way to learn how to implement an interpreter and think through graph-based problems than as a web app. At least for now.
